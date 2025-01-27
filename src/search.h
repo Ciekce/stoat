@@ -126,6 +126,11 @@ namespace stoat {
         [[nodiscard]] std::pair<Position, ThreadPosGuard> applyMove(const Position& pos, Move move);
     };
 
+    struct BenchInfo {
+        usize nodes{};
+        f64 time{};
+    };
+
     class Searcher {
     public:
         Searcher();
@@ -145,6 +150,8 @@ namespace stoat {
             std::unique_ptr<limit::ISearchLimiter> limiter
         );
         void stop();
+
+        void runBenchSearch(BenchInfo& info, const Position& pos, i32 depth);
 
         [[nodiscard]] bool isSearching() const;
 

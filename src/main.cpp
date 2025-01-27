@@ -21,6 +21,7 @@
 #include <string_view>
 #include <vector>
 
+#include "bench.h"
 #include "protocol/handler.h"
 #include "util/split.h"
 
@@ -38,20 +39,20 @@ namespace stoat::protocol {
 } // namespace stoat::protocol
 
 i32 main(i32 argc, char* argv[]) {
-    if (argc > 1) {
-        const auto subcommand = std::string_view{argv[1]};
-        if (subcommand == "bench") {
-            std::cout << "1 nodes 4000000 nps" << std::endl;
-            return 0;
-        }
-    }
-
     protocol::EngineState state{};
 
     std::string currHandler{protocol::kDefaultHandler};
     auto handler = protocol::createHandler(currHandler, state);
 
     s_currHandler = handler.get();
+
+    if (argc > 1) {
+        const auto subcommand = std::string_view{argv[1]};
+        if (subcommand == "bench") {
+            bench::run();
+            return 0;
+        }
+    }
 
     // *must* be destroyed before the handler
     Searcher searcher{};

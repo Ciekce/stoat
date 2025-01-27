@@ -168,6 +168,33 @@ namespace stoat {
         }
     }
 
+    void Searcher::runBenchSearch(BenchInfo& info, const Position& pos, i32 depth) {
+        if (initRootMoves(pos) == RootStatus::kNoLegalMoves) {
+            protocol::currHandler().printInfoString(std::cout, "no legal moves");
+            return;
+        }
+
+        m_limiter = std::make_unique<limit::CompoundLimiter>();
+        m_infinite = false;
+
+        auto& thread = m_threads[0];
+
+        thread.reset(pos, {});
+        thread.maxDepth = depth;
+
+        m_runningThreads.store(1);
+        m_stop.store(false);
+
+        m_startTime = util::Instant::now();
+
+        runSearch(thread);
+
+        info.time = m_startTime.elapsed();
+        info.nodes = thread.loadNodes();
+
+        m_limiter = nullptr;
+    }
+
     bool Searcher::isSearching() const {
         const std::unique_lock lock{m_searchMutex};
         return m_searching;
