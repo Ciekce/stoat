@@ -843,5 +843,5 @@ namespace stoat {
 
     constexpr i32 kMaxDepth = 255;
 
-    constexpr auto ScoreMaxMate = kScoreMate - kMaxDepth;
+    constexpr auto kScoreMaxMate = kScoreMate - kMaxDepth;
 } // namespace stoat

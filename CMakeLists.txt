@@ -20,6 +20,7 @@ add_executable(stoat-native src/main.cpp src/types.h src/core.h src/bitboard.h s
 	src/attacks/bmi2/data.h src/attacks/bmi2/bmi2.h src/attacks/bmi2/bmi2.cpp src/rays.h src/keys.h src/util/rng.h
 	src/protocol/handler.h src/protocol/handler.cpp src/protocol/uci_like.h src/protocol/uci_like.cpp src/pv.h
 	src/protocol/common.h src/protocol/usi.h src/protocol/usi.cpp src/protocol/uci.h src/protocol/uci.cpp
+	src/search.h src/search.cpp src/util/barrier.h src/eval/eval.h src/eval/eval.cpp src/eval/material.h
 )
 
 target_compile_options(stoat-native PUBLIC -march=native $<$<CONFIG:Release>:-flto>)

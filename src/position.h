@@ -84,9 +84,9 @@ namespace stoat {
     };
 
     enum class SennichiteStatus {
-        None = 0,
-        Draw,
-        Win, // perpetual check by opponent
+        kNone = 0,
+        kDraw,
+        kWin, // perpetual check by opponent
     };
 
     class Position {

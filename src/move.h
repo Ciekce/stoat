@@ -183,4 +183,6 @@ namespace stoat {
 
         friend std::ostream& operator<<(std::ostream& stream, const Move& move);
     };
+
+    constexpr Move kNullMove{};
 } // namespace stoat

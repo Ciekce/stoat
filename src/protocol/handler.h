@@ -31,11 +31,14 @@
 #include "../core.h"
 #include "../position.h"
 #include "../pv.h"
+#include "../search.h"
 
 namespace stoat::protocol {
     struct EngineState {
         Position pos{Position::startpos()};
         std::vector<u64> keyHistory{};
+
+        Searcher* searcher{};
     };
 
     struct CpDisplayScore {
@@ -49,7 +52,7 @@ namespace stoat::protocol {
     using DisplayScore = std::variant<CpDisplayScore, MateDisplayScore>;
 
     struct SearchInfo {
-        i32 depth{};
+        i32 depth;
         std::optional<i32> seldepth{};
         std::optional<f64> timeSec{};
         usize nodes;
@@ -58,9 +61,9 @@ namespace stoat::protocol {
     };
 
     enum class CommandResult {
-        Continue = 0,
-        Quit,
-        Unknown,
+        kContinue = 0,
+        kQuit,
+        kUnknown,
     };
 
     class IProtocolHandler {
@@ -72,7 +75,8 @@ namespace stoat::protocol {
         // gui -> engine
         [[nodiscard]] virtual CommandResult handleCommand(
             std::string_view command,
-            std::span<std::string_view> args
+            std::span<std::string_view> args,
+            util::Instant startTime
         ) = 0;
 
         // engine -> gui
@@ -84,4 +88,6 @@ namespace stoat::protocol {
     constexpr std::string_view kDefaultHandler = "usi";
 
     [[nodiscard]] std::unique_ptr<IProtocolHandler> createHandler(std::string_view name, EngineState& state);
+
+    [[nodiscard]] const IProtocolHandler& currHandler();
 } // namespace stoat::protocol

@@ -272,12 +272,12 @@ namespace stoat {
             if (keyHistory[i] == key()) {
                 ++repetitions;
                 if (repetitions == 4) {
-                    return m_consecutiveChecks[stm().idx()] >= 4 ? SennichiteStatus::Win : SennichiteStatus::Draw;
+                    return m_consecutiveChecks[stm().idx()] >= 4 ? SennichiteStatus::kWin : SennichiteStatus::kDraw;
                 }
             }
         }
 
-        return SennichiteStatus::None;
+        return SennichiteStatus::kNone;
     }
 
     // Assumes moves are pseudolegal

@@ -27,6 +27,7 @@
 
 #include "../util/result.h"
 #include "../util/string_map.h"
+#include "../util/timer.h"
 #include "handler.h"
 
 #include "../util/rng.h"
@@ -39,14 +40,18 @@ namespace stoat::protocol {
 
         void printInitialInfo() const final;
 
-        [[nodiscard]] CommandResult handleCommand(std::string_view command, std::span<std::string_view> args) final;
+        [[nodiscard]] CommandResult handleCommand(
+            std::string_view command,
+            std::span<std::string_view> args,
+            util::Instant startTime
+        ) final;
 
         void printSearchInfo(std::ostream& stream, const SearchInfo& info) const final;
         void printInfoString(std::ostream& stream, std::string_view str) const final;
         void printBestMove(std::ostream& stream, Move move) const final;
 
     protected:
-        using CommandHandlerType = std::function<void(std::span<std::string_view>)>;
+        using CommandHandlerType = std::function<void(std::span<std::string_view>, util::Instant)>;
         void registerCommandHandler(std::string_view command, CommandHandlerType handler);
 
         void handleNewGame();
@@ -73,13 +78,14 @@ namespace stoat::protocol {
 
         util::rng::Jsf64Rng m_rng{util::rng::generateSingleSeed()};
 
-        void handle_isready(std::span<std::string_view> args);
-        void handle_position(std::span<std::string_view> args);
-        void handle_go(std::span<std::string_view> args);
-        void handle_setoption(std::span<std::string_view> args);
+        void handle_isready(std::span<std::string_view> args, util::Instant startTime);
+        void handle_position(std::span<std::string_view> args, util::Instant startTime);
+        void handle_go(std::span<std::string_view> args, util::Instant startTime);
+        void handle_stop(std::span<std::string_view> args, util::Instant startTime);
+        void handle_setoption(std::span<std::string_view> args, util::Instant startTime);
 
         // nonstandard
-        void handle_d(std::span<std::string_view> args);
-        void handle_splitperft(std::span<std::string_view> args);
+        void handle_d(std::span<std::string_view> args, util::Instant startTime);
+        void handle_splitperft(std::span<std::string_view> args, util::Instant startTime);
     };
 } // namespace stoat::protocol

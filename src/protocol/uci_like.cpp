@@ -31,11 +31,13 @@
 namespace stoat::protocol {
     UciLikeHandler::UciLikeHandler(EngineState& state) :
             m_state{state} {
-#define REGISTER_HANDLER(Command) registerCommandHandler(#Command, [this](auto args) { handle_##Command(args); })
+#define REGISTER_HANDLER(Command) \
+    registerCommandHandler(#Command, [this](auto args, auto startTime) { handle_##Command(args, startTime); })
 
         REGISTER_HANDLER(isready);
         REGISTER_HANDLER(position);
         REGISTER_HANDLER(go);
+        REGISTER_HANDLER(stop);
         REGISTER_HANDLER(setoption);
 
         REGISTER_HANDLER(d);
@@ -62,17 +64,21 @@ namespace stoat::protocol {
         finishInitialInfo();
     }
 
-    CommandResult UciLikeHandler::handleCommand(std::string_view command, std::span<std::string_view> args) {
+    CommandResult UciLikeHandler::handleCommand(
+        std::string_view command,
+        std::span<std::string_view> args,
+        util::Instant startTime
+    ) {
         if (command == "quit") {
-            return CommandResult::Quit;
+            return CommandResult::kQuit;
         }
 
         if (auto itr = m_cmdHandlers.find(command); itr != m_cmdHandlers.end()) {
-            itr->second(args);
-            return CommandResult::Continue;
+            itr->second(args, startTime);
+            return CommandResult::kContinue;
         }
 
-        return CommandResult::Unknown;
+        return CommandResult::kUnknown;
     }
 
     void UciLikeHandler::printSearchInfo(std::ostream& stream, const SearchInfo& info) const {
@@ -135,14 +141,28 @@ namespace stoat::protocol {
     }
 
     void UciLikeHandler::handleNewGame() {
-        //
+        if (m_state.searcher->isSearching()) {
+            std::cerr << "Still searching" << std::endl;
+            return;
+        }
+
+        m_state.searcher->newGame();
     }
 
-    void UciLikeHandler::handle_isready([[maybe_unused]] std::span<std::string_view> args) {
+    void UciLikeHandler::handle_isready(
+        [[maybe_unused]] std::span<std::string_view> args,
+        [[maybe_unused]] util::Instant startTime
+    ) {
+        m_state.searcher->ensureReady();
         std::cout << "readyok" << std::endl;
     }
 
-    void UciLikeHandler::handle_position(std::span<std::string_view> args) {
+    void UciLikeHandler::handle_position(std::span<std::string_view> args, [[maybe_unused]] util::Instant startTime) {
+        if (m_state.searcher->isSearching()) {
+            std::cerr << "Still searching" << std::endl;
+            return;
+        }
+
         if (args.empty()) {
             return;
         }
@@ -186,53 +206,53 @@ namespace stoat::protocol {
         }
     }
 
-    void UciLikeHandler::handle_go(std::span<std::string_view> args) {
-        movegen::MoveList moves{};
-        movegen::generateAll(moves, m_state.pos);
+    void UciLikeHandler::handle_go(std::span<std::string_view> args, util::Instant startTime) {
+        if (m_state.searcher->isSearching()) {
+            std::cerr << "Still searching" << std::endl;
+            return;
+        }
 
-        u32 start = 0;
+        auto maxDepth = kMaxDepth;
 
-        while (true) {
-            const auto idx = start + m_rng.nextU32(moves.size() - start);
-            const auto move = moves[idx];
-
-            if (m_state.pos.isLegal(move)) {
-                m_state.keyHistory.push_back(m_state.pos.key());
-                const auto newPos = m_state.pos.applyMove(move);
-                const auto sennichite = newPos.testSennichite(m_state.keyHistory);
-                m_state.keyHistory.pop_back();
-
-                // avoid accidental perpetual
-                if (sennichite != SennichiteStatus::Win) {
-                    auto pv = PvList{};
-                    pv.moves[0] = move;
-                    pv.length = 1;
-
-                    const SearchInfo info = {
-                        .depth = 1,
-                        .seldepth = 1,
-                        .nodes = 1,
-                        .score = CpDisplayScore{0},
-                        .pv = pv,
-                    };
-
-                    printSearchInfo(std::cout, info);
-                    printBestMove(std::cout, move);
-
+        for (i32 i = 0; i < args.size(); ++i) {
+            if (args[i] == "depth") {
+                if (i + 1 == args.size()) {
                     break;
                 }
-            }
 
-            std::swap(moves[start], moves[idx]);
-            ++start;
+                ++i;
+
+                if (!util::tryParse(maxDepth, args[i])) {
+                    std::cerr << "Invalid depth '" << args[i] << "'" << std::endl;
+                    return;
+                }
+
+                continue;
+            }
+        }
+
+        m_state.searcher->startSearch(m_state.pos, m_state.keyHistory, startTime, maxDepth);
+    }
+
+    void UciLikeHandler::handle_stop(std::span<std::string_view> args, [[maybe_unused]] util::Instant startTime) {
+        if (m_state.searcher->isSearching()) {
+            m_state.searcher->stop();
+        } else {
+            std::cerr << "Not searching" << std::endl;
         }
     }
 
-    void UciLikeHandler::handle_setoption(std::span<std::string_view> args) {
-        //
+    void UciLikeHandler::handle_setoption(std::span<std::string_view> args, [[maybe_unused]] util::Instant startTime) {
+        if (m_state.searcher->isSearching()) {
+            std::cerr << "Still searching" << std::endl;
+            return;
+        }
     }
 
-    void UciLikeHandler::handle_d([[maybe_unused]] std::span<std::string_view> args) {
+    void UciLikeHandler::handle_d(
+        [[maybe_unused]] std::span<std::string_view> args,
+        [[maybe_unused]] util::Instant startTime
+    ) {
         const auto printKey = [](u64 key) {
             std::ostringstream str{};
             str << "0x" << std::hex << std::setw(16) << std::setfill('0') << key;
@@ -265,7 +285,7 @@ namespace stoat::protocol {
         std::cout << std::endl;
     }
 
-    void UciLikeHandler::handle_splitperft(std::span<std::string_view> args) {
+    void UciLikeHandler::handle_splitperft(std::span<std::string_view> args, [[maybe_unused]] util::Instant startTime) {
         if (args.empty()) {
             return;
         }

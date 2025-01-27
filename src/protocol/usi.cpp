@@ -24,7 +24,7 @@
 namespace stoat::protocol {
     UsiHandler::UsiHandler(EngineState& state) :
             UciLikeHandler{state} {
-        registerCommandHandler("usinewgame", [this](std::span<std::string_view>) { handleNewGame(); });
+        registerCommandHandler("usinewgame", [this](std::span<std::string_view>, util::Instant) { handleNewGame(); });
     }
 
     void UsiHandler::printOptionName(std::ostream& stream, std::string_view name) const {

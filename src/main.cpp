@@ -26,6 +26,17 @@
 
 using namespace stoat;
 
+namespace {
+    // :doom:
+    const protocol::IProtocolHandler* s_currHandler;
+} // namespace
+
+namespace stoat::protocol {
+    const IProtocolHandler& currHandler() {
+        return *s_currHandler;
+    }
+} // namespace stoat::protocol
+
 i32 main(i32 argc, char* argv[]) {
     if (argc > 1) {
         const auto subcommand = std::string_view{argv[1]};
@@ -40,10 +51,18 @@ i32 main(i32 argc, char* argv[]) {
     std::string currHandler{protocol::kDefaultHandler};
     auto handler = protocol::createHandler(currHandler, state);
 
+    s_currHandler = handler.get();
+
+    // *must* be destroyed before the handler
+    Searcher searcher{};
+    state.searcher = &searcher;
+
     std::vector<std::string_view> tokens{};
 
     std::string line{};
     while (std::getline(std::cin, line)) {
+        const auto startTime = util::Instant::now();
+
         tokens.clear();
         util::split(tokens, line);
 
@@ -59,14 +78,21 @@ i32 main(i32 argc, char* argv[]) {
             continue;
         }
 
-        const auto result = handler->handleCommand(command, args);
+        const auto result = handler->handleCommand(command, args, startTime);
 
-        if (result == protocol::CommandResult::Quit) {
+        if (result == protocol::CommandResult::kQuit) {
             break;
-        } else if (result == protocol::CommandResult::Unknown) {
+        } else if (result == protocol::CommandResult::kUnknown) {
             if (auto newHandler = protocol::createHandler(command, state)) {
+                if (searcher.isSearching()) {
+                    std::cerr << "Still searching" << std::endl;
+                    continue;
+                }
+
                 currHandler = command;
                 handler = std::move(newHandler);
+
+                s_currHandler = handler.get();
 
                 handler->printInitialInfo();
             } else {

@@ -55,7 +55,7 @@ namespace stoat::protocol {
 
     UciHandler::UciHandler(EngineState& state) :
             UciLikeHandler{state} {
-        registerCommandHandler("ucinewgame", [this](std::span<std::string_view>) { handleNewGame(); });
+        registerCommandHandler("ucinewgame", [this](std::span<std::string_view>, util::Instant) { handleNewGame(); });
     }
 
     void UciHandler::printOptionName(std::ostream& stream, std::string_view name) const {
@@ -207,6 +207,11 @@ namespace stoat::protocol {
     }
 
     void UciHandler::printMove(std::ostream& stream, Move move) const {
+        if (move.isNull()) {
+            stream << "0000";
+            return;
+        }
+
         if (move.isDrop()) {
             const auto square = move.to();
             const auto piece = move.dropPiece();
