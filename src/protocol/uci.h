@@ -32,8 +32,9 @@ namespace stoat::protocol {
 
         void finishInitialInfo() const final;
 
-        util::Result<Position, std::optional<std::string>> parsePosition(std::span<std::string_view> args) final;
-        util::Result<Move, InvalidMoveError> parseMove(std::string_view str) final;
+        [[nodiscard]] util::Result<Position, std::optional<std::string>> parsePosition(std::span<std::string_view> args
+        ) const final;
+        [[nodiscard]] util::Result<Move, InvalidMoveError> parseMove(std::string_view str) const final;
 
         void printBoard(std::ostream& stream, const Position& pos) const final;
         void printFen(std::ostream& stream, const Position& pos) const final;
@@ -41,5 +42,11 @@ namespace stoat::protocol {
         void printMateScore(std::ostream& stream, i32 plies) const final;
 
         void printFenLine(std::ostream& stream, const Position& pos) const final;
+
+        [[nodiscard]] std::string_view btimeToken() const final;
+        [[nodiscard]] std::string_view wtimeToken() const final;
+
+        [[nodiscard]] std::string_view bincToken() const final;
+        [[nodiscard]] std::string_view wincToken() const final;
     };
 } // namespace stoat::protocol

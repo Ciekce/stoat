@@ -69,7 +69,8 @@ namespace stoat::protocol {
         std::cout << "uciok" << std::endl;
     }
 
-    util::Result<Position, std::optional<std::string>> UciHandler::parsePosition(std::span<std::string_view> args) {
+    util::Result<Position, std::optional<std::string>> UciHandler::parsePosition(std::span<std::string_view> args
+    ) const {
         assert(!args.empty());
 
         if (args[0] != "fen") {
@@ -129,7 +130,7 @@ namespace stoat::protocol {
         });
     }
 
-    util::Result<Move, InvalidMoveError> UciHandler::parseMove(std::string_view str) {
+    util::Result<Move, InvalidMoveError> UciHandler::parseMove(std::string_view str) const {
         if (str.size() < 4 || str.size() > 5) {
             return util::err<InvalidMoveError>();
         }
@@ -245,5 +246,21 @@ namespace stoat::protocol {
         stream << "Fen: ";
         printFen(stream, pos);
         stream << '\n';
+    }
+
+    std::string_view UciHandler::btimeToken() const {
+        return "wtime";
+    }
+
+    std::string_view UciHandler::wtimeToken() const {
+        return "btime";
+    }
+
+    std::string_view UciHandler::bincToken() const {
+        return "winc";
+    }
+
+    std::string_view UciHandler::wincToken() const {
+        return "binc";
     }
 } // namespace stoat::protocol

@@ -21,12 +21,14 @@
 #include "types.h"
 
 #include <atomic>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <utility>
 #include <vector>
 
 #include "arch.h"
+#include "limit.h"
 #include "movegen.h"
 #include "position.h"
 #include "pv.h"
@@ -134,7 +136,14 @@ namespace stoat {
 
         void setThreads(u32 threadCount);
 
-        void startSearch(const Position& pos, std::span<const u64> keyHistory, util::Instant startTime, i32 maxDepth);
+        void startSearch(
+            const Position& pos,
+            std::span<const u64> keyHistory,
+            util::Instant startTime,
+            bool infinite,
+            i32 maxDepth,
+            std::unique_ptr<limit::ISearchLimiter> limiter
+        );
         void stop();
 
         [[nodiscard]] bool isSearching() const;
@@ -159,6 +168,9 @@ namespace stoat {
 
         std::atomic_bool m_stop{};
         std::atomic_bool m_quit{};
+
+        bool m_infinite{};
+        std::unique_ptr<limit::ISearchLimiter> m_limiter{};
 
         movegen::MoveList m_rootMoves{};
 

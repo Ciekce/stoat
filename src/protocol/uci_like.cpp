@@ -22,11 +22,10 @@
 #include <iostream>
 #include <sstream>
 
+#include "../limit.h"
 #include "../perft.h"
 #include "../util/parse.h"
 #include "common.h"
-
-#include "../movegen.h"
 
 namespace stoat::protocol {
     UciLikeHandler::UciLikeHandler(EngineState& state) :
@@ -212,26 +211,135 @@ namespace stoat::protocol {
             return;
         }
 
+        auto limiter = std::make_unique<limit::CompoundLimiter>();
+
+        bool infinite = false;
+
         auto maxDepth = kMaxDepth;
 
-        for (i32 i = 0; i < args.size(); ++i) {
-            if (args[i] == "depth") {
-                if (i + 1 == args.size()) {
-                    break;
-                }
+        std::optional<f64> btime{};
+        std::optional<f64> wtime{};
 
-                ++i;
+        std::optional<f64> binc{};
+        std::optional<f64> winc{};
+
+        for (i32 i = 0; i < args.size(); ++i) {
+            if (args[i] == "infinite") {
+                infinite = true;
+            } else if (args[i] == "depth") {
+                if (++i == args.size()) {
+                    std::cerr << "Missing depth" << std::endl;
+                    return;
+                }
 
                 if (!util::tryParse(maxDepth, args[i])) {
                     std::cerr << "Invalid depth '" << args[i] << "'" << std::endl;
                     return;
                 }
+            } else if (args[i] == "nodes") {
+                if (++i == args.size()) {
+                    std::cerr << "Missing node limit" << std::endl;
+                    return;
+                }
 
-                continue;
+                usize maxNodes{};
+
+                if (!util::tryParse(maxNodes, args[i])) {
+                    std::cerr << "Invalid node limit '" << args[i] << "'" << std::endl;
+                    return;
+                }
+
+                limiter->addLimiter<limit::NodeLimiter>(maxNodes);
+            } else if (args[i] == "movetime") {
+                if (++i == args.size()) {
+                    std::cerr << "Missing move time limit" << std::endl;
+                    return;
+                }
+
+                u64 maxTimeMs{};
+
+                if (!util::tryParse(maxTimeMs, args[i])) {
+                    std::cerr << "Invalid move time limit '" << args[i] << "'" << std::endl;
+                    return;
+                }
+
+                const auto maxTimeSec = static_cast<f64>(maxTimeMs) / 1000.0;
+                limiter->addLimiter<limit::MoveTimeLimiter>(startTime, maxTimeSec);
+            } else if (args[i] == btimeToken()) {
+                if (++i == args.size()) {
+                    std::cerr << "Missing " << btimeToken() << " limit" << std::endl;
+                    return;
+                }
+
+                u64 btimeMs{};
+
+                if (!util::tryParse(btimeMs, args[i])) {
+                    std::cerr << "Invalid " << btimeToken() << " limit '" << args[i] << "'" << std::endl;
+                    return;
+                }
+
+                btime = static_cast<f64>(btimeMs) / 1000.0;
+            } else if (args[i] == wtimeToken()) {
+                if (++i == args.size()) {
+                    std::cerr << "Missing " << wtimeToken() << " limit" << std::endl;
+                    return;
+                }
+
+                u64 wtimeMs{};
+
+                if (!util::tryParse(wtimeMs, args[i])) {
+                    std::cerr << "Invalid " << wtimeToken() << " limit '" << args[i] << "'" << std::endl;
+                    return;
+                }
+
+                wtime = static_cast<f64>(wtimeMs) / 1000.0;
+            } else if (args[i] == bincToken()) {
+                if (++i == args.size()) {
+                    std::cerr << "Missing " << bincToken() << " limit" << std::endl;
+                    return;
+                }
+
+                u64 bincMs{};
+
+                if (!util::tryParse(bincMs, args[i])) {
+                    std::cerr << "Invalid " << bincToken() << " limit '" << args[i] << "'" << std::endl;
+                    return;
+                }
+
+                binc = static_cast<f64>(bincMs) / 1000.0;
+            } else if (args[i] == wincToken()) {
+                if (++i == args.size()) {
+                    std::cerr << "Missing " << wincToken() << " limit" << std::endl;
+                    return;
+                }
+
+                u64 wincMs{};
+
+                if (!util::tryParse(wincMs, args[i])) {
+                    std::cerr << "Invalid " << wincToken() << " limit '" << args[i] << "'" << std::endl;
+                    return;
+                }
+
+                winc = static_cast<f64>(wincMs) / 1000.0;
             }
         }
 
-        m_state.searcher->startSearch(m_state.pos, m_state.keyHistory, startTime, maxDepth);
+        const auto time = m_state.pos.stm() == Colors::kBlack ? btime : wtime;
+        const auto inc = m_state.pos.stm() == Colors::kBlack ? binc : winc;
+
+        if (time) {
+            const limit::TimeLimits limits{
+                .remaining = *time,
+                .increment = inc ? *inc : 0,
+            };
+
+            limiter->addLimiter<limit::TimeManager>(startTime, limits);
+        } else if (inc) {
+            printInfoString(std::cout, "Warning: increment given but no time, ignoring");
+        }
+
+        m_state.searcher
+            ->startSearch(m_state.pos, m_state.keyHistory, startTime, infinite, maxDepth, std::move(limiter));
     }
 
     void UciLikeHandler::handle_stop(std::span<std::string_view> args, [[maybe_unused]] util::Instant startTime) {

@@ -60,8 +60,10 @@ namespace stoat::protocol {
 
         virtual void finishInitialInfo() const = 0;
 
-        virtual util::Result<Position, std::optional<std::string>> parsePosition(std::span<std::string_view> args) = 0;
-        virtual util::Result<Move, InvalidMoveError> parseMove(std::string_view str) = 0;
+        [[nodiscard]] virtual util::Result<Position, std::optional<std::string>> parsePosition(
+            std::span<std::string_view> args
+        ) const = 0;
+        [[nodiscard]] virtual util::Result<Move, InvalidMoveError> parseMove(std::string_view str) const = 0;
 
         virtual void printBoard(std::ostream& stream, const Position& pos) const = 0;
         virtual void printFen(std::ostream& stream, const Position& pos) const = 0;
@@ -71,12 +73,16 @@ namespace stoat::protocol {
         // ech
         virtual void printFenLine(std::ostream& stream, const Position& pos) const = 0;
 
+        [[nodiscard]] virtual std::string_view btimeToken() const = 0;
+        [[nodiscard]] virtual std::string_view wtimeToken() const = 0;
+
+        [[nodiscard]] virtual std::string_view bincToken() const = 0;
+        [[nodiscard]] virtual std::string_view wincToken() const = 0;
+
     private:
         util::UnorderedStringMap<CommandHandlerType> m_cmdHandlers{};
 
         EngineState& m_state;
-
-        util::rng::Jsf64Rng m_rng{util::rng::generateSingleSeed()};
 
         void handle_isready(std::span<std::string_view> args, util::Instant startTime);
         void handle_position(std::span<std::string_view> args, util::Instant startTime);

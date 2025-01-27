@@ -43,7 +43,8 @@ namespace stoat::protocol {
         std::cout << "usiok" << std::endl;
     }
 
-    util::Result<Position, std::optional<std::string>> UsiHandler::parsePosition(std::span<std::string_view> args) {
+    util::Result<Position, std::optional<std::string>> UsiHandler::parsePosition(std::span<std::string_view> args
+    ) const {
         assert(!args.empty());
 
         if (args[0] != "sfen") {
@@ -59,7 +60,7 @@ namespace stoat::protocol {
         });
     }
 
-    util::Result<Move, InvalidMoveError> UsiHandler::parseMove(std::string_view str) {
+    util::Result<Move, InvalidMoveError> UsiHandler::parseMove(std::string_view str) const {
         return Move::fromStr(str);
     }
 
@@ -81,5 +82,21 @@ namespace stoat::protocol {
 
     void UsiHandler::printFenLine(std::ostream& stream, const Position& pos) const {
         stream << "Sfen: " << pos.sfen() << '\n';
+    }
+
+    std::string_view UsiHandler::btimeToken() const {
+        return "btime";
+    }
+
+    std::string_view UsiHandler::wtimeToken() const {
+        return "wtime";
+    }
+
+    std::string_view UsiHandler::bincToken() const {
+        return "binc";
+    }
+
+    std::string_view UsiHandler::wincToken() const {
+        return "winc";
     }
 } // namespace stoat::protocol

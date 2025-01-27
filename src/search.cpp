@@ -91,6 +91,7 @@ namespace stoat {
 
         if (!m_threads.empty()) {
             stopThreads();
+            m_quit.store(false);
         }
 
         m_threads.clear();
@@ -114,11 +115,16 @@ namespace stoat {
         const Position& pos,
         std::span<const u64> keyHistory,
         util::Instant startTime,
-        i32 maxDepth
+        bool infinite,
+        i32 maxDepth,
+        std::unique_ptr<limit::ISearchLimiter> limiter
     ) {
         m_resetBarrier.arriveAndWait();
 
         const std::unique_lock lock{m_searchMutex};
+
+        m_infinite = infinite;
+        m_limiter = std::move(limiter);
 
         const auto status = initRootMoves(pos);
 
@@ -225,6 +231,10 @@ namespace stoat {
             }
 
             if (thread.isMainThread()) {
+                if (m_limiter->stopSoft(thread.loadNodes())) {
+                    break;
+                }
+
                 report(thread, m_startTime.elapsed());
             }
         }
@@ -244,6 +254,7 @@ namespace stoat {
 
             finalReport(m_startTime.elapsed());
 
+            m_limiter = nullptr;
             m_searching = false;
         } else {
             waitForThreads();
@@ -256,6 +267,13 @@ namespace stoat {
 
         assert(kRootNode || ply > 0);
         assert(!kRootNode || ply == 0);
+
+        if (!kRootNode && thread.isMainThread() && thread.rootDepth > 1) {
+            if (m_limiter->stopHard(thread.loadNodes())) {
+                m_stop.store(true, std::memory_order::relaxed);
+                return 0;
+            }
+        }
 
         thread.incNodes();
 
