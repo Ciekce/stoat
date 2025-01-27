@@ -344,7 +344,14 @@ namespace stoat {
                 score = protocol::MateDisplayScore{-(kScoreMate + bestThread.lastScore)};
             }
         } else {
-            score = protocol::CpDisplayScore{bestThread.lastScore};
+            auto cp = bestThread.lastScore;
+
+            // clamp draw scores to 0
+            if (std::abs(cp) <= 2) {
+                cp = 0;
+            }
+
+            score = protocol::CpDisplayScore{cp};
         }
 
         const protocol::SearchInfo info = {
