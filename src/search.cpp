@@ -242,7 +242,7 @@ namespace stoat {
             thread.rootDepth = depth;
             thread.resetSeldepth();
 
-            const auto score = search<true>(thread, thread.rootPos, rootPv, depth, 0);
+            const auto score = search<true>(thread, thread.rootPos, rootPv, depth, 0, -kScoreInf, kScoreInf);
 
             if (hasStopped()) {
                 break;
@@ -289,7 +289,15 @@ namespace stoat {
     }
 
     template <bool kRootNode>
-    Score Searcher::search(ThreadData& thread, const Position& pos, PvList& pv, i32 depth, i32 ply) {
+    Score Searcher::search(
+        ThreadData& thread,
+        const Position& pos,
+        PvList& pv,
+        i32 depth,
+        i32 ply,
+        Score alpha,
+        Score beta
+    ) {
         assert(ply >= 0 && ply <= kMaxDepth);
 
         assert(kRootNode || ply > 0);
@@ -348,7 +356,7 @@ namespace stoat {
             } else if (sennichite == SennichiteStatus::kDraw) {
                 score = drawScore(thread.loadNodes());
             } else {
-                score = -search(thread, newPos, curr.pv, depth - 1, ply + 1);
+                score = -search(thread, newPos, curr.pv, depth - 1, ply + 1, -beta, -alpha);
             }
 
             if (hasStopped()) {
@@ -357,9 +365,17 @@ namespace stoat {
 
             if (score > bestScore) {
                 bestScore = score;
+            }
+
+            if (score > alpha) {
+                alpha = score;
 
                 assert(curr.pv.length + 1 <= kMaxDepth);
                 pv.update(move, curr.pv);
+
+                if (score >= beta) {
+                    break;
+                }
             }
         }
 

@@ -203,7 +203,7 @@ namespace stoat {
         }
 
         template <bool kRootNode = false>
-        Score search(ThreadData& thread, const Position& pos, PvList& pv, i32 depth, i32 ply);
+        Score search(ThreadData& thread, const Position& pos, PvList& pv, i32 depth, i32 ply, Score alpha, Score beta);
 
         void report(const ThreadData& bestThread, f64 time);
         void finalReport(f64 time);
