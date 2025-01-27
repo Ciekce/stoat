@@ -23,24 +23,31 @@
 
 namespace stoat::attacks::sliders::bmi2 {
     namespace {
-        template <const internal::PieceData& kData, i32... Dirs>
-        std::array<Bitboard, kData.tableSize> generateAttacks() {
-            std::array<Bitboard, kData.tableSize> dst{};
+        template <typename CompressedType, const internal::PieceData& kData, i32... Dirs>
+        std::array<CompressedType, kData.tableSize> generateAttacks() {
+            std::array<CompressedType, kData.tableSize> dst{};
 
             for (i32 sqIdx = 0; sqIdx < Squares::kCount; ++sqIdx) {
                 const auto sq = Square::fromRaw(sqIdx);
                 const auto& sqData = kData.squares[sq.idx()];
 
-                const auto entries = 1 << sqData.mask.popcount();
+                const auto entries = 1 << sqData.blockerMask.popcount();
 
                 for (i32 i = 0; i < entries; ++i) {
-                    const auto occ = Bitboard{util::pdep(i, sqData.mask.raw())};
+                    const auto occ = Bitboard{util::pdep(i, sqData.blockerMask.raw())};
 
-                    auto& attacks = dst[sqData.offset + i];
+                    Bitboard attacks{};
+
+                    //auto& attacks = ;
 
                     for (const auto dir : {Dirs...}) {
                         attacks |= attacks::internal::generateSlidingAttacks(sq, dir, occ);
                     }
+
+                    const auto compressed = util::pext(attacks.raw(), sqData.attackMask.raw(), sqData.attackShift);
+                    dst[sqData.offset + i] = static_cast<CompressedType>(compressed);
+
+                    assert(static_cast<u128>(dst[sqData.offset + i]) == compressed);
                 }
             }
 
@@ -48,20 +55,21 @@ namespace stoat::attacks::sliders::bmi2 {
         }
     } // namespace
 
-    const util::MultiArray<Bitboard, Colors::kCount, kLanceDataTableSize> g_lanceAttacks = {
-        generateAttacks<lanceData(Colors::kBlack), offsets::kNorth>(),
-        generateAttacks<lanceData(Colors::kWhite), offsets::kSouth>(),
+    const util::MultiArray<u8, Colors::kCount, kLanceDataTableSize> g_lanceAttacks = {
+        generateAttacks<u8, lanceData(Colors::kBlack), offsets::kNorth>(),
+        generateAttacks<u8, lanceData(Colors::kWhite), offsets::kSouth>(),
     };
 
-    const std::array<Bitboard, kBishopData.tableSize> g_bishopAttacks = generateAttacks<
+    const std::array<u16, kBishopData.tableSize> g_bishopAttacks = generateAttacks<
+        u16,
         kBishopData,
         offsets::kNorthWest,
         offsets::kNorthEast,
         offsets::kSouthWest,
         offsets::kSouthEast>();
 
-    const std::array<Bitboard, kRookData.tableSize> g_rookAttacks =
-        generateAttacks<kRookData, offsets::kNorth, offsets::kSouth, offsets::kWest, offsets::kEast>();
+    const std::array<u16, kRookData.tableSize> g_rookAttacks =
+        generateAttacks<u16, kRookData, offsets::kNorth, offsets::kSouth, offsets::kWest, offsets::kEast>();
 } // namespace stoat::attacks::sliders::bmi2
 
 #endif

@@ -30,35 +30,41 @@
 
 namespace stoat::attacks::sliders {
     namespace bmi2 {
-        extern const util::MultiArray<Bitboard, Colors::kCount, kLanceDataTableSize> g_lanceAttacks;
+        extern const util::MultiArray<u8, Colors::kCount, kLanceDataTableSize> g_lanceAttacks;
 
-        [[nodiscard]] inline std::span<const Bitboard, kLanceDataTableSize> lanceAttacks(Color c) {
+        [[nodiscard]] inline std::span<const u8, kLanceDataTableSize> lanceAttacks(Color c) {
             assert(c);
             return g_lanceAttacks[c.idx()];
         }
 
-        extern const std::array<Bitboard, kBishopData.tableSize> g_bishopAttacks;
-        extern const std::array<Bitboard, kRookData.tableSize> g_rookAttacks;
+        extern const std::array<u16, kBishopData.tableSize> g_bishopAttacks;
+        extern const std::array<u16, kRookData.tableSize> g_rookAttacks;
     } // namespace bmi2
 
     [[nodiscard]] inline Bitboard lanceAttacks(Square sq, Color c, Bitboard occ) {
         const auto& sqData = bmi2::lanceData(c).squares[sq.idx()];
 
-        const usize idx = util::pext(occ.raw(), sqData.mask.raw(), sqData.shift);
-        return bmi2::lanceAttacks(c)[sqData.offset + idx];
+        const usize idx = util::pext(occ.raw(), sqData.blockerMask.raw(), sqData.blockerShift);
+        const auto compressed = bmi2::lanceAttacks(c)[sqData.offset + idx];
+
+        return Bitboard{util::pdep(compressed, sqData.attackMask.raw(), sqData.attackShift)};
     }
 
     [[nodiscard]] inline Bitboard bishopAttacks(Square sq, Bitboard occ) {
         const auto& sqData = bmi2::kBishopData.squares[sq.idx()];
 
-        const usize idx = util::pext(occ.raw(), sqData.mask.raw(), sqData.shift);
-        return bmi2::g_bishopAttacks[sqData.offset + idx];
+        const usize idx = util::pext(occ.raw(), sqData.blockerMask.raw(), sqData.blockerShift);
+        const auto compressed = bmi2::g_bishopAttacks[sqData.offset + idx];
+
+        return Bitboard{util::pdep(compressed, sqData.attackMask.raw(), sqData.attackShift)};
     }
 
     [[nodiscard]] inline Bitboard rookAttacks(Square sq, Bitboard occ) {
         const auto& sqData = bmi2::kRookData.squares[sq.idx()];
 
-        const usize idx = util::pext(occ.raw(), sqData.mask.raw(), sqData.shift);
-        return bmi2::g_rookAttacks[sqData.offset + idx];
+        const usize idx = util::pext(occ.raw(), sqData.blockerMask.raw(), sqData.blockerShift);
+        const auto compressed = bmi2::g_rookAttacks[sqData.offset + idx];
+
+        return Bitboard{util::pdep(compressed, sqData.attackMask.raw(), sqData.attackShift)};
     }
 } // namespace stoat::attacks::sliders

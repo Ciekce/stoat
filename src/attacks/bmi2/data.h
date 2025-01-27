@@ -27,9 +27,13 @@
 namespace stoat::attacks::sliders::bmi2 {
     namespace internal {
         struct SquareData {
-            Bitboard mask;
+            Bitboard blockerMask;
+            Bitboard attackMask;
+
             u32 offset;
-            i32 shift;
+
+            i32 blockerShift;
+            i32 attackShift;
         };
 
         struct PieceData {
@@ -47,13 +51,17 @@ namespace stoat::attacks::sliders::bmi2 {
 
                 for (const auto dir : {Dirs...}) {
                     const auto attacks = attacks::internal::generateSlidingAttacks(sq, dir, Bitboards::kEmpty);
-                    sqData.mask |= attacks & ~attacks::internal::edges(dir);
+
+                    sqData.blockerMask |= attacks & ~attacks::internal::edges(dir);
+                    sqData.attackMask |= attacks;
                 }
 
                 sqData.offset = dst.tableSize;
-                sqData.shift = std::popcount(static_cast<u64>(sqData.mask.raw()));
 
-                dst.tableSize += 1 << sqData.mask.popcount();
+                sqData.blockerShift = std::popcount(static_cast<u64>(sqData.blockerMask.raw()));
+                sqData.attackShift = std::popcount(static_cast<u64>(sqData.attackMask.raw()));
+
+                dst.tableSize += 1 << sqData.blockerMask.popcount();
             }
 
             return dst;
