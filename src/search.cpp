@@ -327,7 +327,20 @@ namespace stoat {
 
         auto& curr = thread.stack[ply];
 
+        tt::ProbedEntry ttEntry{};
+        const bool ttHit = m_ttable.probe(ttEntry, pos.key(), ply);
+
+        if (!kPvNode && ttEntry.depth >= depth
+            && (ttEntry.flag == tt::Flag::kExact                                   //
+                || ttEntry.flag == tt::Flag::kUpperBound && ttEntry.score <= alpha //
+                || ttEntry.flag == tt::Flag::kLowerBound && ttEntry.score >= beta))
+        {
+            return ttEntry.score;
+        }
+
         auto bestScore = -kScoreInf;
+
+        auto ttFlag = tt::Flag::kUpperBound;
 
         movegen::MoveList moves{};
         movegen::generateAll(moves, pos);
@@ -386,9 +399,12 @@ namespace stoat {
                     pv.update(move, curr.pv);
                 }
 
-                if (score >= beta) {
-                    break;
-                }
+                ttFlag = tt::Flag::kExact;
+            }
+
+            if (score >= beta) {
+                ttFlag = tt::Flag::kLowerBound;
+                break;
             }
         }
 
@@ -396,6 +412,8 @@ namespace stoat {
             assert(!kRootNode);
             return -kScoreMate + ply;
         }
+
+        m_ttable.put(pos.key(), bestScore, depth, ply, ttFlag);
 
         return bestScore;
     }
