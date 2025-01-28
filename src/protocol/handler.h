@@ -58,6 +58,7 @@ namespace stoat::protocol {
         usize nodes;
         DisplayScore score;
         const PvList& pv;
+        std::optional<u32> hashfull{};
     };
 
     enum class CommandResult {

@@ -103,11 +103,15 @@ namespace stoat::protocol {
 
         if (std::holds_alternative<MateDisplayScore>(info.score)) {
             const auto plies = std::get<MateDisplayScore>(info.score).plies;
-            std::cout << "mate ";
+            stream << "mate ";
             printMateScore(std::cout, plies);
         } else {
             const auto score = std::get<CpDisplayScore>(info.score).score;
-            std::cout << "cp " << score;
+            stream << "cp " << score;
+        }
+
+        if (info.hashfull) {
+            stream << " hashfull " << *info.hashfull;
         }
 
         stream << " pv";

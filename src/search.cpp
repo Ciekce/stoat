@@ -453,6 +453,7 @@ namespace stoat {
             .nodes = totalNodes,
             .score = score,
             .pv = bestThread.lastPv,
+            .hashfull = m_ttable.fullPermille(),
         };
 
         protocol::currHandler().printSearchInfo(std::cout, info);
