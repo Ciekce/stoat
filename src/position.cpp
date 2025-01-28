@@ -270,9 +270,9 @@ namespace stoat {
 
         for (i32 i = static_cast<i32>(keyHistory.size()) - 4; i >= end; i -= 2) {
             if (keyHistory[i] == key()) {
-                ++repetitions;
-                if (repetitions == 4) {
-                    return m_consecutiveChecks[stm().idx()] >= 4 ? SennichiteStatus::kWin : SennichiteStatus::kDraw;
+                --repetitions;
+                if (repetitions == 0) {
+                    return m_consecutiveChecks[stm().idx()] >= 2 ? SennichiteStatus::kWin : SennichiteStatus::kDraw;
                 }
             }
         }
