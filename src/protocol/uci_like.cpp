@@ -24,6 +24,7 @@
 
 #include "../limit.h"
 #include "../perft.h"
+#include "../ttable.h"
 #include "../util/parse.h"
 #include "common.h"
 
@@ -49,12 +50,11 @@ namespace stoat::protocol {
         std::cout << "id name " << kName << ' ' << kVersion << '\n';
         std::cout << "id author " << kAuthor << '\n';
 
-        //TODO actual options
-
         // dummy options for OB
         std::cout << "option name ";
         printOptionName(std::cout, "Hash");
-        std::cout << " type spin default 64 min 1 max 131072\n";
+        std::cout << " type spin default " << tt::kDefaultTtSizeMib << " min " << tt::kTtSizeRange.min() << " max "
+                  << tt::kTtSizeRange.max() << '\n';
 
         std::cout << "option name ";
         printOptionName(std::cout, "Threads");
@@ -354,6 +354,74 @@ namespace stoat::protocol {
         if (m_state.searcher->isSearching()) {
             std::cerr << "Still searching" << std::endl;
             return;
+        }
+
+        if (args.size() < 2 || args[0] != "name") {
+            return;
+        }
+
+        //TODO handle options more generically
+
+        const auto valueIdx = std::distance(args.begin(), std::ranges::find(args, "value"));
+
+        if (valueIdx == 2) {
+            std::cerr << "Missing option name" << std::endl;
+            return;
+        }
+
+        if (valueIdx >= args.size() - 1) {
+            std::cerr << "Missing value" << std::endl;
+            return;
+        }
+
+        if (valueIdx > 3) {
+            std::ostringstream str{};
+
+            bool first = true;
+            for (usize i = 3; i < valueIdx; ++i) {
+                if (!first) {
+                    str << ' ';
+                } else {
+                    first = false;
+                }
+                str << args[i];
+            }
+
+            printInfoString(std::cout, "Warning: spaces in option names not supported, skipping \"" + str.str() + "\"");
+        }
+
+        std::string name{};
+        name.reserve(args[1].length());
+        std::ranges::transform(args[1], std::back_inserter(name), [](char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+
+        name = transformOptionName(name);
+
+        std::ostringstream valueStr{};
+
+        bool first = true;
+        for (usize i = valueIdx + 1; i < args.size(); ++i) {
+            if (!first) {
+                valueStr << ' ';
+            } else {
+                first = false;
+            }
+            valueStr << args[i];
+        }
+
+        const auto value = valueStr.view();
+        assert(!value.empty());
+
+        if (name == "hash") {
+            if (const auto newHash = util::tryParse<usize>(value)) {
+                const auto size = tt::kTtSizeRange.clamp(*newHash);
+                m_state.searcher->setTtSize(size);
+            }
+        } else if (name == "threads") {
+            //
+        } else {
+            std::cerr << "Unknown option '" << args[1] << "'" << std::endl;
         }
     }
 

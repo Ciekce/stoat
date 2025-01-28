@@ -37,11 +37,13 @@ namespace stoat::bench {
             "6n1l/2+S1k4/2lp4p/1np1B2b1/3PP4/1N1S3rP/1P2+pPP+p1/1p1G5/3KG2r1 b GSN2L4Pgs2p 1"sv,
             "l6nl/5+P1gk/2np1S3/p1p4Pp/3P2Sp1/1PPb2P1P/P5GS1/R8/LN4bKL w RGgsn5p 1"sv,
         };
+
+        constexpr usize kTtSizeMib = 16;
     } // namespace
 
     void run(i32 depth) {
-        Searcher searcher{};
-        searcher.newGame();
+        Searcher searcher{kTtSizeMib};
+        searcher.ensureReady();
 
         usize totalNodes{};
         f64 totalTime{};

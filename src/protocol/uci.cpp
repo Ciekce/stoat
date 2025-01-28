@@ -62,6 +62,14 @@ namespace stoat::protocol {
         stream << name;
     }
 
+    std::string UciHandler::transformOptionName(std::string_view name) const {
+        if (name.starts_with("uci_")) {
+            return std::string{name.substr(4)};
+        }
+
+        return std::string{name};
+    }
+
     void UciHandler::finishInitialInfo() const {
         std::cout << "option name UCI_Variant type combo default shogi var shogi\n";
         std::cout << "\ninfo string Stoat's UCI support is intended for Cute Chess compatibility only.\n";

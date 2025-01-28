@@ -33,6 +33,7 @@
 #include "position.h"
 #include "pv.h"
 #include "thread.h"
+#include "ttable.h"
 #include "util/barrier.h"
 #include "util/timer.h"
 
@@ -44,13 +45,14 @@ namespace stoat {
 
     class Searcher {
     public:
-        Searcher();
+        Searcher(usize ttSizeMib);
         ~Searcher();
 
         void newGame();
         void ensureReady();
 
         void setThreads(u32 threadCount);
+        void setTtSize(usize mib);
 
         void startSearch(
             const Position& pos,
@@ -91,6 +93,8 @@ namespace stoat {
         std::unique_ptr<limit::ISearchLimiter> m_limiter{};
 
         movegen::MoveList m_rootMoves{};
+
+        tt::TTable m_ttable;
 
         enum class RootStatus {
             kNoLegalMoves = 0,

@@ -39,6 +39,14 @@ namespace stoat::protocol {
         stream << name;
     }
 
+    std::string UsiHandler::transformOptionName(std::string_view name) const {
+        if (name.starts_with("usi_")) {
+            return std::string{name.substr(4)};
+        }
+
+        return std::string{name};
+    }
+
     void UsiHandler::finishInitialInfo() const {
         std::cout << "usiok" << std::endl;
     }

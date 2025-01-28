@@ -41,7 +41,8 @@ namespace stoat {
         }
     } // namespace
 
-    Searcher::Searcher() {
+    Searcher::Searcher(usize ttSizeMb) :
+            m_ttable{ttSizeMb} {
         setThreads(1);
     }
 
@@ -51,14 +52,19 @@ namespace stoat {
     }
 
     void Searcher::newGame() {
-        //
+        // Finalisation (init) clears the TT, so don't clear it twice
+        if (!m_ttable.finalize()) {
+            m_ttable.clear();
+        }
     }
 
     void Searcher::ensureReady() {
-        //
+        m_ttable.finalize();
     }
 
     void Searcher::setThreads(u32 threadCount) {
+        assert(!isSearching());
+
         if (threadCount < 1) {
             threadCount = 1;
         }
@@ -85,6 +91,11 @@ namespace stoat {
         }
     }
 
+    void Searcher::setTtSize(usize mib) {
+        assert(!isSearching());
+        m_ttable.resize(mib);
+    }
+
     void Searcher::startSearch(
         const Position& pos,
         std::span<const u64> keyHistory,
@@ -93,9 +104,25 @@ namespace stoat {
         i32 maxDepth,
         std::unique_ptr<limit::ISearchLimiter> limiter
     ) {
+        if (!limiter) {
+            std::cerr << "Missing limiter" << std::endl;
+            return;
+        }
+
         m_resetBarrier.arriveAndWait();
 
         const std::unique_lock lock{m_searchMutex};
+
+        const auto initStart = util::Instant::now();
+
+        if (m_ttable.finalize()) {
+            const auto initTime = initStart.elapsed();
+            const auto ms = static_cast<u32>(initTime * 1000.0);
+            protocol::currHandler().printInfoString(
+                std::cout,
+                "No newgame or isready before go, lost " + std::to_string(ms) + " ms to TT initialization"
+            );
+        }
 
         m_infinite = infinite;
         m_limiter = std::move(limiter);

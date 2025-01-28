@@ -55,7 +55,7 @@ i32 main(i32 argc, char* argv[]) {
     }
 
     // *must* be destroyed before the handler
-    Searcher searcher{};
+    Searcher searcher{tt::kDefaultTtSizeMib};
     state.searcher = &searcher;
 
     std::vector<std::string_view> tokens{};

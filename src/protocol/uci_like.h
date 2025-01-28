@@ -57,6 +57,7 @@ namespace stoat::protocol {
         void handleNewGame();
 
         virtual void printOptionName(std::ostream& stream, std::string_view name) const = 0;
+        [[nodiscard]] virtual std::string transformOptionName(std::string_view name) const = 0;
 
         virtual void finishInitialInfo() const = 0;
 

@@ -29,6 +29,7 @@ namespace stoat::protocol {
         ~UsiHandler() override = default;
 
         void printOptionName(std::ostream& stream, std::string_view name) const final;
+        [[nodiscard]] std::string transformOptionName(std::string_view name) const final;
 
         void finishInitialInfo() const final;
 
