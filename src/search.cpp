@@ -216,7 +216,7 @@ namespace stoat {
             thread.rootDepth = depth;
             thread.resetSeldepth();
 
-            const auto score = search<true>(thread, thread.rootPos, rootPv, depth, 0, -kScoreInf, kScoreInf);
+            const auto score = search<true, true>(thread, thread.rootPos, rootPv, depth, 0, -kScoreInf, kScoreInf);
 
             if (hasStopped()) {
                 break;
@@ -262,7 +262,7 @@ namespace stoat {
         }
     }
 
-    template <bool kRootNode>
+    template <bool kPvNode, bool kRootNode>
     Score Searcher::search(
         ThreadData& thread,
         const Position& pos,
@@ -276,6 +276,8 @@ namespace stoat {
 
         assert(kRootNode || ply > 0);
         assert(!kRootNode || ply == 0);
+
+        assert(kPvNode || alpha == beta - 1);
 
         if (!kRootNode && thread.isMainThread() && thread.rootDepth > 1) {
             if (m_limiter->stopHard(thread.loadNodes())) {
@@ -315,7 +317,9 @@ namespace stoat {
                 continue;
             }
 
-            curr.pv.length = 0;
+            if constexpr (kPvNode) {
+                curr.pv.length = 0;
+            }
 
             ++legalMoves;
 
@@ -330,7 +334,13 @@ namespace stoat {
             } else if (sennichite == SennichiteStatus::kDraw) {
                 score = drawScore(thread.loadNodes());
             } else {
-                score = -search(thread, newPos, curr.pv, depth - 1, ply + 1, -beta, -alpha);
+                if (!kPvNode || legalMoves > 1) {
+                    score = -search(thread, newPos, curr.pv, depth - 1, ply + 1, -alpha - 1, -alpha);
+                }
+
+                if (kPvNode && (legalMoves == 1 || score > alpha)) {
+                    score = -search<true>(thread, newPos, curr.pv, depth - 1, ply + 1, -beta, -alpha);
+                }
             }
 
             if (hasStopped()) {
@@ -344,8 +354,10 @@ namespace stoat {
             if (score > alpha) {
                 alpha = score;
 
-                assert(curr.pv.length + 1 <= kMaxDepth);
-                pv.update(move, curr.pv);
+                if constexpr (kPvNode) {
+                    assert(curr.pv.length + 1 <= kMaxDepth);
+                    pv.update(move, curr.pv);
+                }
 
                 if (score >= beta) {
                     break;

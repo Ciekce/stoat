@@ -113,8 +113,19 @@ namespace stoat {
             return std::ranges::find(m_rootMoves, move) != m_rootMoves.end();
         }
 
-        template <bool kRootNode = false>
+        template <bool kPvNode = false, bool kRootNode = false>
         Score search(ThreadData& thread, const Position& pos, PvList& pv, i32 depth, i32 ply, Score alpha, Score beta);
+
+        template <>
+        Score search<false, true>(
+            ThreadData& thread,
+            const Position& pos,
+            PvList& pv,
+            i32 depth,
+            i32 ply,
+            Score alpha,
+            Score beta
+        ) = delete;
 
         void report(const ThreadData& bestThread, f64 time);
         void finalReport(f64 time);
