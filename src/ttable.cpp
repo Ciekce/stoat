@@ -102,6 +102,7 @@ namespace stoat::tt {
 
         if (entry.key == packEntryKey(key)) {
             dst.score = scoreFromTt(static_cast<Score>(entry.score), ply);
+            dst.move = entry.move;
             dst.depth = static_cast<i32>(entry.depth);
             dst.flag = entry.flag;
 
@@ -111,7 +112,7 @@ namespace stoat::tt {
         return false;
     }
 
-    void TTable::put(u64 key, Score score, i32 depth, i32 ply, Flag flag) {
+    void TTable::put(u64 key, Score score, Move move, i32 depth, i32 ply, Flag flag) {
         assert(!m_pendingInit);
 
         assert(depth >= 0);
@@ -123,6 +124,7 @@ namespace stoat::tt {
 
         newEntry.key = packEntryKey(key);
         newEntry.score = static_cast<i16>(scoreToTt(score, ply));
+        newEntry.move = move;
         newEntry.depth = static_cast<u8>(depth);
         newEntry.flag = flag;
 

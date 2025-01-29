@@ -21,6 +21,7 @@
 #include <algorithm>
 
 #include "eval/eval.h"
+#include "movepick.h"
 #include "protocol/handler.h"
 
 namespace stoat {
@@ -338,16 +339,18 @@ namespace stoat {
             return ttEntry.score;
         }
 
+        auto bestMove = kNullMove;
         auto bestScore = -kScoreInf;
 
         auto ttFlag = tt::Flag::kUpperBound;
 
-        movegen::MoveList moves{};
-        movegen::generateAll(moves, pos);
+        auto generator = MoveGenerator::create(pos, ttEntry.move);
 
         u32 legalMoves{};
 
-        for (const auto move : moves) {
+        while (const auto move = generator.next()) {
+            assert(pos.isPseudolegal(move));
+
             if constexpr (kRootNode) {
                 if (!isLegalRootMove(move)) {
                     continue;
@@ -393,6 +396,7 @@ namespace stoat {
 
             if (score > alpha) {
                 alpha = score;
+                bestMove = move;
 
                 if constexpr (kPvNode) {
                     assert(curr.pv.length + 1 <= kMaxDepth);
@@ -413,7 +417,7 @@ namespace stoat {
             return -kScoreMate + ply;
         }
 
-        m_ttable.put(pos.key(), bestScore, depth, ply, ttFlag);
+        m_ttable.put(pos.key(), bestScore, bestMove, depth, ply, ttFlag);
 
         return bestScore;
     }

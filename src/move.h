@@ -74,6 +74,10 @@ namespace stoat {
             return m_move == 0;
         }
 
+        [[nodiscard]] constexpr explicit operator bool() const {
+            return !isNull();
+        }
+
         [[nodiscard]] constexpr bool operator==(const Move&) const = default;
 
         constexpr Move& operator=(const Move&) = default;

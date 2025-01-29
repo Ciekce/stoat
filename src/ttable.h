@@ -21,6 +21,7 @@
 #include "types.h"
 
 #include "core.h"
+#include "move.h"
 #include "util/range.h"
 
 namespace stoat::tt {
@@ -35,9 +36,10 @@ namespace stoat::tt {
     };
 
     struct ProbedEntry {
-        Score score;
-        i32 depth;
-        Flag flag;
+        Score score{};
+        i32 depth{};
+        Move move{};
+        Flag flag{};
     };
 
     class TTable {
@@ -49,7 +51,7 @@ namespace stoat::tt {
         bool finalize();
 
         bool probe(ProbedEntry& dst, u64 key, i32 ply) const;
-        void put(u64 key, Score score, i32 depth, i32 ply, Flag flag);
+        void put(u64 key, Score score, Move move, i32 depth, i32 ply, Flag flag);
 
         void clear();
 
@@ -59,9 +61,9 @@ namespace stoat::tt {
         struct alignas(8) Entry {
             u16 key;
             i16 score;
+            Move move;
             u8 depth;
             Flag flag;
-            [[maybe_unused]] u8 padding[2];
         };
 
         static_assert(sizeof(Entry) == 8);
