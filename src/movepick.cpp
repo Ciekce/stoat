@@ -82,6 +82,23 @@ namespace stoat {
                 return kNullMove;
             }
 
+            case MovegenStage::QsearchGenerateRecaptures: {
+                movegen::generateRecaptures(m_moves, m_pos, m_captureSq);
+                m_end = m_moves.size();
+
+                ++m_stage;
+                [[fallthrough]];
+            }
+
+            case MovegenStage::QsearchRecaptures: {
+                if (const auto move = selectNext([](Move) { return true; })) {
+                    return move;
+                }
+
+                m_stage = MovegenStage::End;
+                return kNullMove;
+            }
+
             default:
                 return kNullMove;
         }
