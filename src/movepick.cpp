@@ -48,15 +48,38 @@ namespace stoat {
                 return kNullMove;
             }
 
+            case MovegenStage::QsearchGenerateCaptures: {
+                movegen::generateCaptures(m_moves, m_pos);
+                m_end = m_moves.size();
+
+                ++m_stage;
+                [[fallthrough]];
+            }
+
+            case MovegenStage::QsearchCaptures: {
+                if (const auto move = selectNext([](Move) { return true; })) {
+                    return move;
+                }
+
+                m_stage = MovegenStage::End;
+                return kNullMove;
+            }
+
             default:
                 return kNullMove;
         }
     }
 
-    MoveGenerator MoveGenerator::create(const Position& pos, Move ttMove) {
-        return MoveGenerator{MovegenStage::TtMove, pos, ttMove};
+    MoveGenerator MoveGenerator::main(const Position& pos, Move ttMove) {
+        return MoveGenerator{MovegenStage::TtMove, pos, ttMove, Squares::kNone};
     }
 
-    MoveGenerator::MoveGenerator(MovegenStage initialStage, const Position& pos, Move ttMove) :
-            m_stage{initialStage}, m_pos{pos}, m_ttMove{ttMove} {}
+    MoveGenerator MoveGenerator::qsearch(const Position& pos, Square captureSq) {
+        const auto initialStage =
+            captureSq ? MovegenStage::QsearchGenerateRecaptures : MovegenStage::QsearchGenerateCaptures;
+        return MoveGenerator{initialStage, pos, kNullMove, captureSq};
+    }
+
+    MoveGenerator::MoveGenerator(MovegenStage initialStage, const Position& pos, Move ttMove, Square captureSq) :
+            m_stage{initialStage}, m_pos{pos}, m_ttMove{ttMove}, m_captureSq{captureSq} {}
 } // namespace stoat

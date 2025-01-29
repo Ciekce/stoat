@@ -28,4 +28,6 @@ namespace stoat::movegen {
     using MoveList = util::StaticVector<Move, 600>;
 
     void generateAll(MoveList& dst, const Position& pos);
+    void generateCaptures(MoveList& dst, const Position& pos);
+    void generateRecaptures(MoveList& dst, const Position& pos, Square captureSq);
 } // namespace stoat::movegen

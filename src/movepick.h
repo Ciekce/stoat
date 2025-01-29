@@ -28,9 +28,13 @@
 
 namespace stoat {
     enum class MovegenStage : i32 {
-        TtMove,
+        TtMove = 0,
         Generate,
         All,
+        QsearchGenerateCaptures,
+        QsearchCaptures,
+        QsearchGenerateRecaptures,
+        QsearchRecaptures,
         End,
     };
 
@@ -51,10 +55,11 @@ namespace stoat {
             return m_stage;
         }
 
-        [[nodiscard]] static MoveGenerator create(const Position& pos, Move ttMove);
+        [[nodiscard]] static MoveGenerator main(const Position& pos, Move ttMove);
+        [[nodiscard]] static MoveGenerator qsearch(const Position& pos, Square captureSq);
 
     private:
-        MoveGenerator(MovegenStage initialStage, const Position& pos, Move ttMove);
+        MoveGenerator(MovegenStage initialStage, const Position& pos, Move ttMove, Square captureSq);
 
         [[nodiscard]] inline Move selectNext(auto predicate) {
             while (m_idx < m_end) {
@@ -73,6 +78,8 @@ namespace stoat {
         movegen::MoveList m_moves{};
 
         Move m_ttMove;
+
+        Square m_captureSq;
 
         usize m_idx{};
         usize m_end{};

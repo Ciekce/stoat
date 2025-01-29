@@ -269,37 +269,56 @@ namespace stoat::movegen {
             generate(PieceTypes::kBishop);
             generate(PieceTypes::kRook);
         }
+
+        template <bool kGenerateDrops>
+        void generate(MoveList& dst, const Position& pos, Bitboard dstMask) {
+            generateKings(dst, pos, dstMask);
+
+            if (pos.checkers().multiple()) {
+                return;
+            }
+
+            auto dropMask = dstMask & ~pos.occupancy();
+
+            if (!pos.checkers().empty()) {
+                const auto checker = pos.checkers().lsb();
+                const auto checkRay = rayBetween(pos.king(pos.stm()), checker);
+
+                dstMask &= checkRay | checker.bit();
+                dropMask &= checkRay;
+            }
+
+            generatePawns(dst, pos, dstMask);
+            generateLances(dst, pos, dstMask);
+            generateKnights(dst, pos, dstMask);
+            generateSilvers(dst, pos, dstMask);
+            generateGolds(dst, pos, dstMask);
+            generateBishops(dst, pos, dstMask);
+            generateRooks(dst, pos, dstMask);
+            generatePromotedBishops(dst, pos, dstMask);
+            generatePromotedRooks(dst, pos, dstMask);
+
+            if constexpr (kGenerateDrops) {
+                generateDrops(dst, pos, dropMask);
+            }
+        }
     } // namespace
 
     void generateAll(MoveList& dst, const Position& pos) {
-        auto dstMask = ~pos.colorBb(pos.stm());
+        const auto dstMask = ~pos.colorBb(pos.stm());
+        generate<true>(dst, pos, dstMask);
+    }
 
-        generateKings(dst, pos, dstMask);
+    void generateCaptures(MoveList& dst, const Position& pos) {
+        const auto dstMask = pos.colorBb(pos.stm().flip());
+        generate<false>(dst, pos, dstMask);
+    }
 
-        if (pos.checkers().multiple()) {
-            return;
-        }
+    void generateRecaptures(MoveList& dst, const Position& pos, Square captureSq) {
+        assert(!pos.colorBb(pos.stm()).getSquare(captureSq));
+        assert(pos.colorBb(pos.stm().flip()).getSquare(captureSq));
 
-        auto dropMask = ~pos.occupancy();
-
-        if (!pos.checkers().empty()) {
-            const auto checker = pos.checkers().lsb();
-            const auto checkRay = rayBetween(pos.king(pos.stm()), checker);
-
-            dstMask &= checkRay | checker.bit();
-            dropMask &= checkRay;
-        }
-
-        generatePawns(dst, pos, dstMask);
-        generateLances(dst, pos, dstMask);
-        generateKnights(dst, pos, dstMask);
-        generateSilvers(dst, pos, dstMask);
-        generateGolds(dst, pos, dstMask);
-        generateBishops(dst, pos, dstMask);
-        generateRooks(dst, pos, dstMask);
-        generatePromotedBishops(dst, pos, dstMask);
-        generatePromotedRooks(dst, pos, dstMask);
-
-        generateDrops(dst, pos, dropMask);
+        const auto dstMask = Bitboard::fromSquare(captureSq);
+        generate<false>(dst, pos, dstMask);
     }
 } // namespace stoat::movegen

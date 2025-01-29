@@ -314,13 +314,15 @@ namespace stoat {
             }
         }
 
-        thread.incNodes();
-
         if (depth <= 0) {
-            return eval::staticEval(pos);
+            return qsearch<kPvNode>(thread, pos, ply, alpha, beta);
         }
 
-        thread.updateSeldepth(ply + 1);
+        thread.incNodes();
+
+        if constexpr (kPvNode) {
+            thread.updateSeldepth(ply + 1);
+        }
 
         if (ply >= kMaxDepth) {
             return pos.isInCheck() ? 0 : eval::staticEval(pos);
@@ -344,7 +346,7 @@ namespace stoat {
 
         auto ttFlag = tt::Flag::kUpperBound;
 
-        auto generator = MoveGenerator::create(pos, ttEntry.move);
+        auto generator = MoveGenerator::main(pos, ttEntry.move);
 
         u32 legalMoves{};
 
@@ -369,7 +371,7 @@ namespace stoat {
             const auto [newPos, guard] = thread.applyMove(pos, move);
             const auto sennichite = newPos.testSennichite(thread.keyHistory);
 
-            Score score{};
+            Score score;
 
             if (sennichite == SennichiteStatus::kWin) {
                 // illegal perpetual
@@ -418,6 +420,85 @@ namespace stoat {
         }
 
         m_ttable.put(pos.key(), bestScore, bestMove, depth, ply, ttFlag);
+
+        return bestScore;
+    }
+
+    template <bool kPvNode>
+    Score Searcher::qsearch(
+        ThreadData& thread,
+        const Position& pos,
+        i32 ply,
+        Score alpha,
+        Score beta,
+        Square captureSq
+    ) {
+        assert(ply >= 0 && ply <= kMaxDepth);
+
+        if (thread.isMainThread() && thread.rootDepth > 1) {
+            if (m_limiter->stopHard(thread.loadNodes())) {
+                m_stop.store(true, std::memory_order::relaxed);
+                return 0;
+            }
+        }
+
+        thread.incNodes();
+
+        if constexpr (kPvNode) {
+            thread.updateSeldepth(ply + 1);
+        }
+
+        if (ply >= kMaxDepth) {
+            return pos.isInCheck() ? 0 : eval::staticEval(pos);
+        }
+
+        const auto staticEval = eval::staticEval(pos);
+
+        if (staticEval >= beta) {
+            return staticEval;
+        }
+
+        if (staticEval > alpha) {
+            alpha = staticEval;
+        }
+
+        auto bestScore = staticEval;
+
+        auto generator = MoveGenerator::qsearch(pos, captureSq);
+
+        while (const auto move = generator.next()) {
+            assert(pos.isPseudolegal(move));
+
+            if (!pos.isLegal(move)) {
+                continue;
+            }
+
+            const auto [newPos, guard] = thread.applyMove(pos, move);
+            const auto sennichite = newPos.testSennichite(thread.keyHistory);
+
+            Score score;
+
+            if (sennichite == SennichiteStatus::kWin) {
+                // illegal perpetual
+                continue;
+            } else if (sennichite == SennichiteStatus::kDraw) {
+                score = drawScore(thread.loadNodes());
+            } else {
+                score = -qsearch<kPvNode>(thread, newPos, ply + 1, -beta, -alpha, move.to());
+            }
+
+            if (score > bestScore) {
+                bestScore = score;
+            }
+
+            if (score > alpha) {
+                alpha = score;
+            }
+
+            if (score >= beta) {
+                break;
+            }
+        }
 
         return bestScore;
     }

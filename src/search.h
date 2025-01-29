@@ -131,6 +131,16 @@ namespace stoat {
             Score beta
         ) = delete;
 
+        template <bool kPvNode = false>
+        Score qsearch(
+            ThreadData& thread,
+            const Position& pos,
+            i32 ply,
+            Score alpha,
+            Score beta,
+            Square captureSq = Squares::kNone
+        );
+
         void report(const ThreadData& bestThread, f64 time);
         void finalReport(f64 time);
     };
