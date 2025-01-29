@@ -29,8 +29,10 @@
 namespace stoat {
     enum class MovegenStage : i32 {
         TtMove = 0,
-        Generate,
-        All,
+        GenerateCaptures,
+        Captures,
+        GenerateNonCaptures,
+        NonCaptures,
         QsearchGenerateCaptures,
         QsearchCaptures,
         QsearchGenerateRecaptures,

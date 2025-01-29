@@ -62,7 +62,7 @@ namespace stoat::movegen {
             }
         }
 
-        template <bool CanPromote>
+        template <bool kCanPromote>
         void generatePrecalculatedWithColorAndOcc(
             MoveList& dst,
             const Position& pos,
@@ -75,7 +75,7 @@ namespace stoat::movegen {
 
             const auto occ = pos.occupancy();
 
-            if constexpr (CanPromote) {
+            if constexpr (kCanPromote) {
                 const auto promoArea = Bitboards::promoArea(stm);
 
                 auto promotable = pieces;
@@ -104,7 +104,7 @@ namespace stoat::movegen {
             }
         }
 
-        template <bool CanPromote>
+        template <bool kCanPromote>
         void generatePrecalculatedWithColor(
             MoveList& dst,
             const Position& pos,
@@ -113,7 +113,7 @@ namespace stoat::movegen {
             Bitboard dstMask,
             Bitboard nonPromoMask = Bitboards::kAll
         ) {
-            generatePrecalculatedWithColorAndOcc<CanPromote>(
+            generatePrecalculatedWithColorAndOcc<kCanPromote>(
                 dst,
                 pos,
                 pieces,
@@ -123,7 +123,7 @@ namespace stoat::movegen {
             );
         }
 
-        template <bool CanPromote>
+        template <bool kCanPromote>
         void generatePrecalculatedWithOcc(
             MoveList& dst,
             const Position& pos,
@@ -132,7 +132,7 @@ namespace stoat::movegen {
             Bitboard dstMask,
             Bitboard nonPromoMask = Bitboards::kAll
         ) {
-            generatePrecalculatedWithColorAndOcc<CanPromote>(
+            generatePrecalculatedWithColorAndOcc<kCanPromote>(
                 dst,
                 pos,
                 pieces,
@@ -142,7 +142,7 @@ namespace stoat::movegen {
             );
         }
 
-        template <bool CanPromote>
+        template <bool kCanPromote>
         void generatePrecalculated(
             MoveList& dst,
             const Position& pos,
@@ -151,7 +151,7 @@ namespace stoat::movegen {
             Bitboard dstMask,
             Bitboard nonPromoMask = Bitboards::kAll
         ) {
-            generatePrecalculatedWithColorAndOcc<CanPromote>(
+            generatePrecalculatedWithColorAndOcc<kCanPromote>(
                 dst,
                 pos,
                 pieces,
@@ -312,6 +312,11 @@ namespace stoat::movegen {
     void generateCaptures(MoveList& dst, const Position& pos) {
         const auto dstMask = pos.colorBb(pos.stm().flip());
         generate<false>(dst, pos, dstMask);
+    }
+
+    void generateNonCaptures(MoveList& dst, const Position& pos) {
+        const auto dstMask = ~pos.occupancy();
+        generate<true>(dst, pos, dstMask);
     }
 
     void generateRecaptures(MoveList& dst, const Position& pos, Square captureSq) {

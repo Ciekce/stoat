@@ -31,15 +31,32 @@ namespace stoat {
                 [[fallthrough]];
             }
 
-            case MovegenStage::Generate: {
-                movegen::generateAll(m_moves, m_pos);
+            case MovegenStage::GenerateCaptures: {
+                movegen::generateCaptures(m_moves, m_pos);
                 m_end = m_moves.size();
 
                 ++m_stage;
                 [[fallthrough]];
             }
 
-            case MovegenStage::All: {
+            case MovegenStage::Captures: {
+                if (const auto move = selectNext([this](Move move) { return move != m_ttMove; })) {
+                    return move;
+                }
+
+                ++m_stage;
+                [[fallthrough]];
+            }
+
+            case MovegenStage::GenerateNonCaptures: {
+                movegen::generateNonCaptures(m_moves, m_pos);
+                m_end = m_moves.size();
+
+                ++m_stage;
+                [[fallthrough]];
+            }
+
+            case MovegenStage::NonCaptures: {
                 if (const auto move = selectNext([this](Move move) { return move != m_ttMove; })) {
                     return move;
                 }
