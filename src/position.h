@@ -164,6 +164,7 @@ namespace stoat {
 
         [[nodiscard]] SennichiteStatus testSennichite(std::span<const u64> keyHistory, i32 limit = 16) const;
 
+        [[nodiscard]] bool isPseudolegal(Move move) const;
         [[nodiscard]] bool isLegal(Move move) const;
 
         [[nodiscard]] bool isAttacked(Square sq, Color attacker, Bitboard occ) const;

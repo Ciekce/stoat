@@ -280,8 +280,90 @@ namespace stoat {
         return SennichiteStatus::kNone;
     }
 
+    bool Position::isPseudolegal(Move move) const {
+        assert(!move.isNull());
+
+        const auto stm = this->stm();
+        const auto nstm = this->stm().flip();
+
+        const auto occ = occupancy();
+
+        const auto getPromoRequiredZone = [&](PieceType pt) {
+            Bitboard zone{};
+
+            // pawns, knights and lances must promote upon reaching the backrank
+            if (pt == PieceTypes::kPawn || pt == PieceTypes::kLance || pt == PieceTypes::kKnight) {
+                zone |= Bitboards::relativeRank(stm, 8);
+            }
+
+            // knights additionally must promote upon reaching the rank before the backrank
+            if (pt == PieceTypes::kKnight) {
+                zone |= Bitboards::relativeRank(stm, 7);
+            }
+
+            return zone;
+        };
+
+        if (move.isDrop()) {
+            // can't drop a piece we don't have
+            const auto& hand = this->hand(stm);
+            if (hand.count(move.dropPiece()) == 0) {
+                return false;
+            }
+
+            // must drop in an empty square
+            if (occ.getSquare(move.to())) {
+                return false;
+            }
+
+            // can't drop a piece on a square where it would
+            // be required to promote when moving (see above)
+            const auto promoRequiredZone = getPromoRequiredZone(move.dropPiece());
+            if (promoRequiredZone.getSquare(move.to())) {
+                return false;
+            }
+
+            // can't drop a pawn in the same file as another of our unpromoted pawns
+            if (move.dropPiece() == PieceTypes::kPawn) {
+                const auto stmPawnFiles = pieceBb(PieceTypes::kPawn, stm).fillFile();
+                if (stmPawnFiles.getSquare(move.to())) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        const auto moving = pieceOn(move.from());
+
+        // must move a piece that a) exists and b) is our own
+        if (!moving || moving.color() != stm) {
+            return false;
+        }
+
+        if (move.isPromo()) {
+            // can only promote when moving into, in, or out of our promo area
+            const auto promoArea = Bitboards::promoArea(stm);
+            if (!promoArea.getSquare(move.from()) && !promoArea.getSquare(move.to())) {
+                return false;
+            }
+        } else {
+            const auto promoRequiredZone = getPromoRequiredZone(moving.type());
+            if (promoRequiredZone.getSquare(move.to())) {
+                return false;
+            }
+        }
+
+        // have to actually move to a square that this piece can attack
+        const auto attacks = attacks::pieceAttacks(moving.type(), move.from(), stm, occ);
+        if (!attacks.getSquare(move.to())) {
+            return false;
+        }
+
+        return true;
+    }
+
     // Assumes moves are pseudolegal
-    //TODO detect perpetual check
     bool Position::isLegal(Move move) const {
         assert(!move.isNull());
 
