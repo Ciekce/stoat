@@ -52,6 +52,8 @@ namespace stoat {
                 movegen::generateNonCaptures(m_moves, m_pos);
                 m_end = m_moves.size();
 
+                scoreNonCaptures();
+
                 ++m_stage;
                 [[fallthrough]];
             }
@@ -104,16 +106,54 @@ namespace stoat {
         }
     }
 
-    MoveGenerator MoveGenerator::main(const Position& pos, Move ttMove) {
-        return MoveGenerator{MovegenStage::TtMove, pos, ttMove, Squares::kNone};
+    MoveGenerator MoveGenerator::main(const Position& pos, Move ttMove, const HistoryTables& history) {
+        return MoveGenerator{MovegenStage::TtMove, pos, ttMove, Squares::kNone, &history};
     }
 
     MoveGenerator MoveGenerator::qsearch(const Position& pos, Square captureSq) {
         const auto initialStage =
             captureSq ? MovegenStage::QsearchGenerateRecaptures : MovegenStage::QsearchGenerateCaptures;
-        return MoveGenerator{initialStage, pos, kNullMove, captureSq};
+        return MoveGenerator{initialStage, pos, kNullMove, captureSq, nullptr};
     }
 
-    MoveGenerator::MoveGenerator(MovegenStage initialStage, const Position& pos, Move ttMove, Square captureSq) :
-            m_stage{initialStage}, m_pos{pos}, m_ttMove{ttMove}, m_captureSq{captureSq} {}
+    MoveGenerator::MoveGenerator(
+        MovegenStage initialStage,
+        const Position& pos,
+        Move ttMove,
+        Square captureSq,
+        const HistoryTables* history
+    ) :
+            m_stage{initialStage}, m_pos{pos}, m_ttMove{ttMove}, m_captureSq{captureSq}, m_history{history} {}
+
+    i32 MoveGenerator::scoreNonCapture(Move move) {
+        assert(m_history);
+        return m_history->nonCaptureScore(move);
+    }
+
+    void MoveGenerator::scoreNonCaptures() {
+        assert(m_history);
+
+        for (usize idx = m_idx; idx < m_end; ++idx) {
+            m_scores[idx] = scoreNonCapture(m_moves[idx]);
+        }
+    }
+
+    usize MoveGenerator::findNext() {
+        auto bestIdx = m_idx;
+        auto bestScore = m_scores[m_idx];
+
+        for (usize idx = m_idx + 1; idx < m_end; ++idx) {
+            if (m_scores[idx] > bestScore) {
+                bestIdx = idx;
+                bestScore = m_scores[idx];
+            }
+        }
+
+        if (bestIdx != m_idx) {
+            std::swap(m_moves[m_idx], m_moves[bestIdx]);
+            std::swap(m_scores[m_idx], m_scores[bestIdx]);
+        }
+
+        return m_idx++;
+    }
 } // namespace stoat

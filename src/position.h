@@ -167,6 +167,8 @@ namespace stoat {
         [[nodiscard]] bool isPseudolegal(Move move) const;
         [[nodiscard]] bool isLegal(Move move) const;
 
+        [[nodiscard]] bool isCapture(Move move) const;
+
         [[nodiscard]] bool isAttacked(Square sq, Color attacker, Bitboard occ) const;
 
         [[nodiscard]] bool isAttacked(Square sq, Color attacker) const {

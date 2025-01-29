@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "core.h"
+#include "history.h"
 #include "position.h"
 #include "pv.h"
 
@@ -85,6 +86,8 @@ namespace stoat {
 
         Score lastScore{};
         PvList lastPv{};
+
+        HistoryTables history{};
 
         std::vector<StackFrame> stack{};
 
