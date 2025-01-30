@@ -58,19 +58,19 @@ namespace stoat::eval {
 
             const auto& hand = pos.hand(c);
 
-            if (hand.empty()) {
-                return score;
+            if (!hand.empty()) {
+                const auto handPieceValue = [&](PieceType pt) {
+                    return static_cast<i32>(hand.count(pt)) * pieceValue(pt);
+                };
+
+                score += handPieceValue(PieceTypes::kPawn);
+                score += handPieceValue(PieceTypes::kLance);
+                score += handPieceValue(PieceTypes::kKnight);
+                score += handPieceValue(PieceTypes::kSilver);
+                score += handPieceValue(PieceTypes::kGold);
+                score += handPieceValue(PieceTypes::kBishop);
+                score += handPieceValue(PieceTypes::kRook);
             }
-
-            const auto handPieceValue = [&](PieceType pt) { return static_cast<i32>(hand.count(pt)) * pieceValue(pt); };
-
-            score += handPieceValue(PieceTypes::kPawn);
-            score += handPieceValue(PieceTypes::kLance);
-            score += handPieceValue(PieceTypes::kKnight);
-            score += handPieceValue(PieceTypes::kSilver);
-            score += handPieceValue(PieceTypes::kGold);
-            score += handPieceValue(PieceTypes::kBishop);
-            score += handPieceValue(PieceTypes::kRook);
 
             score = std::min(score, 34000);
             score = (120000 * score) / (120000 + score);
