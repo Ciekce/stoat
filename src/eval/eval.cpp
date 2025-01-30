@@ -18,6 +18,8 @@
 
 #include "eval.h"
 
+#include <algorithm>
+
 #include "material.h"
 
 namespace stoat::eval {
@@ -72,6 +74,6 @@ namespace stoat::eval {
 
         score += evalMaterial(pos, stm) - evalMaterial(pos, nstm);
 
-        return score;
+        return std::clamp(score, -kScoreWin + 1, kScoreWin - 1);
     }
 } // namespace stoat::eval
