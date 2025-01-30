@@ -18,6 +18,8 @@
 
 #include "eval.h"
 
+#include <algorithm>
+
 #include "../attacks/attacks.h"
 #include "material.h"
 
@@ -69,6 +71,9 @@ namespace stoat::eval {
             score += handPieceValue(PieceTypes::kGold);
             score += handPieceValue(PieceTypes::kBishop);
             score += handPieceValue(PieceTypes::kRook);
+
+            score = std::min(score, 34000);
+            score = (120000 * score) / (120000 + score);
 
             return score;
         }
@@ -134,6 +139,6 @@ namespace stoat::eval {
         score += evalMaterial(pos, stm) - evalMaterial(pos, nstm);
         score += evalMobility(pos, stm) - evalMobility(pos, nstm);
 
-        return score;
+        return std::clamp(score, -kScoreWin + 1, kScoreWin - 1);
     }
 } // namespace stoat::eval
