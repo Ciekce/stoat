@@ -27,6 +27,7 @@
 #include "core.h"
 #include "position.h"
 #include "pv.h"
+#include "movepick.h"
 
 namespace stoat {
     struct SearchStats {
@@ -65,6 +66,7 @@ namespace stoat {
 
     struct StackFrame {
         PvList pv{};
+        KillerTable killers{};
     };
 
     struct alignas(kCacheLineSize) ThreadData {

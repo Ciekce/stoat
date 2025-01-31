@@ -31,6 +31,8 @@ namespace stoat {
         TtMove = 0,
         GenerateCaptures,
         Captures,
+        Killer1,
+        Killer2,
         GenerateNonCaptures,
         NonCaptures,
         QsearchGenerateCaptures,
@@ -49,6 +51,23 @@ namespace stoat {
         return static_cast<i32>(a) <=> static_cast<i32>(b);
     }
 
+    struct KillerTable {
+        Move killer1{};
+        Move killer2{};
+
+        inline void push(Move move) {
+            if (killer1 != move) {
+                killer2 = killer1;
+                killer1 = move;
+            }
+        }
+
+        inline void clear() {
+            killer1 = kNullMove;
+            killer2 = kNullMove;
+        }
+    };
+
     class MoveGenerator {
     public:
         [[nodiscard]] Move next();
@@ -57,11 +76,17 @@ namespace stoat {
             return m_stage;
         }
 
-        [[nodiscard]] static MoveGenerator main(const Position& pos, Move ttMove);
+        [[nodiscard]] static MoveGenerator main(const Position& pos, Move ttMove, KillerTable killers);
         [[nodiscard]] static MoveGenerator qsearch(const Position& pos, Square captureSq);
 
     private:
-        MoveGenerator(MovegenStage initialStage, const Position& pos, Move ttMove, Square captureSq);
+        MoveGenerator(
+            MovegenStage initialStage,
+            const Position& pos,
+            Move ttMove,
+            KillerTable killers,
+            Square captureSq
+        );
 
         [[nodiscard]] inline Move selectNext(auto predicate) {
             while (m_idx < m_end) {
@@ -74,12 +99,17 @@ namespace stoat {
             return kNullMove;
         }
 
+        [[nodiscard]] inline bool isSpecial(Move move) const {
+            return move == m_ttMove || move == m_killers.killer1 || move == m_killers.killer2;
+        }
+
         MovegenStage m_stage;
 
         const Position& m_pos;
         movegen::MoveList m_moves{};
 
         Move m_ttMove;
+        KillerTable m_killers{};
 
         Square m_captureSq;
 

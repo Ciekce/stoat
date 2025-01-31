@@ -457,6 +457,11 @@ namespace stoat {
         return true;
     }
 
+    bool Position::isCapture(Move move) const {
+        assert(move);
+        return !pieceOn(move.to());
+    }
+
     bool Position::isAttacked(Square sq, Color attacker, Bitboard occ) const {
         assert(sq);
         assert(attacker);

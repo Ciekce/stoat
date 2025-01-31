@@ -245,6 +245,8 @@ namespace stoat {
         thread.lastScore = kScoreNone;
         thread.lastPv.reset();
 
+        thread.stack[0].killers.clear();
+
         for (i32 depth = 1;; ++depth) {
             thread.rootDepth = depth;
             thread.resetSeldepth();
@@ -346,12 +348,14 @@ namespace stoat {
             return ttEntry.score;
         }
 
+        thread.stack[ply + 1].killers.clear();
+
         auto bestMove = kNullMove;
         auto bestScore = -kScoreInf;
 
         auto ttFlag = tt::Flag::kUpperBound;
 
-        auto generator = MoveGenerator::main(pos, ttEntry.move);
+        auto generator = MoveGenerator::main(pos, ttEntry.move, curr.killers);
 
         u32 legalMoves{};
 
@@ -422,6 +426,10 @@ namespace stoat {
         if (legalMoves == 0) {
             assert(!kRootNode);
             return -kScoreMate + ply;
+        }
+
+        if (bestMove && !pos.isCapture(bestMove)) {
+            curr.killers.push(bestMove);
         }
 
         m_ttable.put(pos.key(), bestScore, bestMove, depth, ply, ttFlag);

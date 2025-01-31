@@ -48,6 +48,28 @@ namespace stoat {
                 [[fallthrough]];
             }
 
+            case MovegenStage::Killer1: {
+                ++m_stage;
+
+                if (m_killers.killer1 && m_killers.killer1 != m_ttMove && m_pos.isPseudolegal(m_killers.killer1)) {
+                    return m_killers.killer1;
+                }
+
+                [[fallthrough]];
+            }
+
+            case MovegenStage::Killer2: {
+                ++m_stage;
+
+                if (m_killers.killer2 && m_killers.killer2 != m_ttMove && m_killers.killer2 != m_killers.killer1
+                    && m_pos.isPseudolegal(m_killers.killer2))
+                {
+                    return m_killers.killer2;
+                }
+
+                [[fallthrough]];
+            }
+
             case MovegenStage::GenerateNonCaptures: {
                 movegen::generateNonCaptures(m_moves, m_pos);
                 m_end = m_moves.size();
@@ -57,7 +79,7 @@ namespace stoat {
             }
 
             case MovegenStage::NonCaptures: {
-                if (const auto move = selectNext([this](Move move) { return move != m_ttMove; })) {
+                if (const auto move = selectNext([this](Move move) { return !isSpecial(move); })) {
                     return move;
                 }
 
@@ -104,16 +126,22 @@ namespace stoat {
         }
     }
 
-    MoveGenerator MoveGenerator::main(const Position& pos, Move ttMove) {
-        return MoveGenerator{MovegenStage::TtMove, pos, ttMove, Squares::kNone};
+    MoveGenerator MoveGenerator::main(const Position& pos, Move ttMove, KillerTable killers) {
+        return MoveGenerator{MovegenStage::TtMove, pos, ttMove, killers, Squares::kNone};
     }
 
     MoveGenerator MoveGenerator::qsearch(const Position& pos, Square captureSq) {
         const auto initialStage =
             captureSq ? MovegenStage::QsearchGenerateRecaptures : MovegenStage::QsearchGenerateCaptures;
-        return MoveGenerator{initialStage, pos, kNullMove, captureSq};
+        return MoveGenerator{initialStage, pos, kNullMove, KillerTable{}, captureSq};
     }
 
-    MoveGenerator::MoveGenerator(MovegenStage initialStage, const Position& pos, Move ttMove, Square captureSq) :
-            m_stage{initialStage}, m_pos{pos}, m_ttMove{ttMove}, m_captureSq{captureSq} {}
+    MoveGenerator::MoveGenerator(
+        MovegenStage initialStage,
+        const Position& pos,
+        Move ttMove,
+        KillerTable killers,
+        Square captureSq
+    ) :
+            m_stage{initialStage}, m_pos{pos}, m_ttMove{ttMove}, m_killers{killers}, m_captureSq{captureSq} {}
 } // namespace stoat
