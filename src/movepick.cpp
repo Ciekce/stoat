@@ -35,6 +35,8 @@ namespace stoat {
                 movegen::generateCaptures(m_moves, m_pos);
                 m_end = m_moves.size();
 
+                scoreCaptures();
+
                 ++m_stage;
                 [[fallthrough]];
             }
@@ -51,8 +53,6 @@ namespace stoat {
             case MovegenStage::GenerateNonCaptures: {
                 movegen::generateNonCaptures(m_moves, m_pos);
                 m_end = m_moves.size();
-
-                scoreNonCaptures();
 
                 ++m_stage;
                 [[fallthrough]];
@@ -106,35 +106,33 @@ namespace stoat {
         }
     }
 
-    MoveGenerator MoveGenerator::main(const Position& pos, Move ttMove, const HistoryTables& history) {
-        return MoveGenerator{MovegenStage::TtMove, pos, ttMove, Squares::kNone, &history};
+    MoveGenerator MoveGenerator::main(const Position& pos, Move ttMove) {
+        return MoveGenerator{MovegenStage::TtMove, pos, ttMove, Squares::kNone};
     }
 
     MoveGenerator MoveGenerator::qsearch(const Position& pos, Square captureSq) {
         const auto initialStage =
             captureSq ? MovegenStage::QsearchGenerateRecaptures : MovegenStage::QsearchGenerateCaptures;
-        return MoveGenerator{initialStage, pos, kNullMove, captureSq, nullptr};
+        return MoveGenerator{initialStage, pos, kNullMove, captureSq};
     }
 
     MoveGenerator::MoveGenerator(
         MovegenStage initialStage,
         const Position& pos,
         Move ttMove,
-        Square captureSq,
-        const HistoryTables* history
+        Square captureSq
     ) :
-            m_stage{initialStage}, m_pos{pos}, m_ttMove{ttMove}, m_captureSq{captureSq}, m_history{history} {}
+            m_stage{initialStage}, m_pos{pos}, m_ttMove{ttMove}, m_captureSq{captureSq} {}
 
-    i32 MoveGenerator::scoreNonCapture(Move move) {
-        assert(m_history);
-        return m_history->nonCaptureScore(move);
+    i32 MoveGenerator::scoreCapture(Move move) {
+        const auto captured = m_pos.pieceOn(move.to());
+        assert(captured);
+        return static_cast<i32>(captured.idx());
     }
 
-    void MoveGenerator::scoreNonCaptures() {
-        assert(m_history);
-
+    void MoveGenerator::scoreCaptures() {
         for (usize idx = m_idx; idx < m_end; ++idx) {
-            m_scores[idx] = scoreNonCapture(m_moves[idx]);
+            m_scores[idx] = scoreCapture(m_moves[idx]);
         }
     }
 

@@ -22,7 +22,6 @@
 
 #include <compare>
 
-#include "history.h"
 #include "move.h"
 #include "movegen.h"
 #include "position.h"
@@ -58,20 +57,14 @@ namespace stoat {
             return m_stage;
         }
 
-        [[nodiscard]] static MoveGenerator main(const Position& pos, Move ttMove, const HistoryTables& history);
+        [[nodiscard]] static MoveGenerator main(const Position& pos, Move ttMove);
         [[nodiscard]] static MoveGenerator qsearch(const Position& pos, Square captureSq);
 
     private:
-        MoveGenerator(
-            MovegenStage initialStage,
-            const Position& pos,
-            Move ttMove,
-            Square captureSq,
-            const HistoryTables* history
-        );
+        MoveGenerator(MovegenStage initialStage, const Position& pos, Move ttMove, Square captureSq);
 
-        [[nodiscard]] i32 scoreNonCapture(Move move);
-        void scoreNonCaptures();
+        [[nodiscard]] i32 scoreCapture(Move move);
+        void scoreCaptures();
 
         [[nodiscard]] usize findNext();
 
@@ -96,7 +89,6 @@ namespace stoat {
         std::array<i32, movegen::kMoveListCapacity> m_scores{};
 
         Move m_ttMove;
-        const HistoryTables* m_history;
 
         Square m_captureSq;
 

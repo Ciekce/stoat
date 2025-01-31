@@ -34,8 +34,6 @@ namespace stoat {
 
         stats.seldepth.store(0);
         stats.nodes.store(0);
-
-        history.clear();
     }
 
     std::pair<Position, ThreadPosGuard> ThreadData::applyMove(const Position& pos, Move move) {
