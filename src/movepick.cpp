@@ -71,6 +71,8 @@ namespace stoat {
                 movegen::generateCaptures(m_moves, m_pos);
                 m_end = m_moves.size();
 
+                scoreCaptures();
+
                 ++m_stage;
                 [[fallthrough]];
             }
@@ -87,6 +89,8 @@ namespace stoat {
             case MovegenStage::QsearchGenerateRecaptures: {
                 movegen::generateRecaptures(m_moves, m_pos, m_captureSq);
                 m_end = m_moves.size();
+
+                scoreCaptures();
 
                 ++m_stage;
                 [[fallthrough]];
