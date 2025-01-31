@@ -25,6 +25,38 @@
 
 namespace stoat::eval {
     namespace {
+        constexpr std::array kKingRingAttackPower = {
+            10, // pawn
+            25, // promoted pawn
+            12, // lance
+            10, // knight
+            25, // promoted lance
+            25, // promoted knight
+            20, // silver
+            25, // promoted silver
+            27, // gold
+            20, // bishop
+            25, // rook,
+            35, // promoted bishop
+            37, // promoted rook
+        };
+
+        constexpr std::array kKingRingPromoAreaAttackPower = {
+            25, // pawn
+            25, // promoted pawn
+            25, // lance
+            25, // knight
+            25, // promoted lance
+            25, // promoted knight
+            25, // silver
+            25, // promoted silver
+            27, // gold
+            35, // bishop
+            37, // rook,
+            35, // promoted bishop
+            37, // promoted rook
+        };
+
         [[nodiscard]] Score evalMaterial(const Position& pos, Color c) {
             const auto materialCount = [&](PieceType pt) {
                 const auto count = pos.pieceBb(pt, c).popcount();
@@ -68,6 +100,8 @@ namespace stoat::eval {
 
         [[nodiscard]] Score evalKingSafety(const Position& pos, Color c) {
             const auto kingRing = attacks::kingAttacks(pos.king(c));
+            const auto nstmPromoArea = Bitboards::promoArea(c.flip());
+
             const auto occ = pos.occupancy();
 
             Score score{};
@@ -79,7 +113,8 @@ namespace stoat::eval {
 
                 const auto kingRingAttacks = kingRing & attacks::pieceAttacks(pt, sq, c, occ);
 
-                score -= 10 * kingRingAttacks.popcount();
+                score -= kKingRingAttackPower[pt.idx()] * (kingRingAttacks & ~nstmPromoArea).popcount();
+                score -= kKingRingPromoAreaAttackPower[pt.idx()] * (kingRingAttacks & nstmPromoArea).popcount();
             }
 
             return score;
