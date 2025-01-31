@@ -39,6 +39,7 @@ namespace stoat::eval {
             25, // rook,
             35, // promoted bishop
             37, // promoted rook
+            15, // king
         };
 
         constexpr std::array kKingRingPromoAreaAttackPower = {
@@ -55,6 +56,7 @@ namespace stoat::eval {
             37, // rook,
             35, // promoted bishop
             37, // promoted rook
+            15, // king
         };
 
         [[nodiscard]] Score evalMaterial(const Position& pos, Color c) {
