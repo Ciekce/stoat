@@ -125,9 +125,9 @@ namespace stoat {
             m_stage{initialStage}, m_pos{pos}, m_ttMove{ttMove}, m_captureSq{captureSq} {}
 
     i32 MoveGenerator::scoreCapture(Move move) {
-        const auto captured = m_pos.pieceOn(move.to());
-        assert(captured);
-        return static_cast<i32>(captured.idx());
+        const auto capturing = m_pos.pieceOn(move.from()).type();
+        const auto captured = m_pos.pieceOn(move.to()).type();
+        return static_cast<i32>(captured.idx()) * 100 - static_cast<i32>(capturing.idx());
     }
 
     void MoveGenerator::scoreCaptures() {
