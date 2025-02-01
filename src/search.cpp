@@ -410,7 +410,11 @@ namespace stoat {
                 const auto newDepth = depth - 1;
 
                 if (depth >= 2 && legalMoves >= 5 + 2 * kRootNode && generator.stage() >= MovegenStage::NonCaptures) {
-                    const auto reduced = std::min(std::max(newDepth - baseLmr, 1), newDepth - 1);
+                    auto r = baseLmr;
+
+                    r -= kPvNode;
+
+                    const auto reduced = std::min(std::max(newDepth - r, 1), newDepth - 1);
                     score = -search(thread, newPos, curr.pv, reduced, ply + 1, -alpha - 1, -alpha);
 
                     if (score > alpha && reduced < newDepth) {
