@@ -370,15 +370,16 @@ namespace stoat {
 
         if (!kPvNode && !pos.isInCheck()) {
             const auto staticEval = eval::staticEval(pos);
+
             if (depth <= 4 && staticEval - 120 * depth >= beta) {
                 return staticEval;
             }
 
             if (depth >= 4 && staticEval >= beta && !parent->move.isNull()) {
-                static constexpr i32 R = 3;
+                static constexpr i32 kR = 3;
 
                 const auto [newPos, guard] = thread.applyNullMove(ply, pos);
-                const auto score = -search(thread, newPos, curr.pv, depth - R, ply + 1, -beta, -beta + 1);
+                const auto score = -search(thread, newPos, curr.pv, depth - kR, ply + 1, -beta, -beta + 1);
 
                 if (score >= beta) {
                     return score > kScoreWin ? beta : score;
