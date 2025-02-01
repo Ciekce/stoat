@@ -261,6 +261,19 @@ namespace stoat {
         return newPos;
     }
 
+    Position Position::applyNullMove() const {
+        auto newPos = *this;
+
+        ++newPos.m_moveCount;
+
+        newPos.m_stm = newPos.m_stm.flip();
+        newPos.m_keys.flipStm();
+
+        newPos.updateAttacks();
+
+        return newPos;
+    }
+
     SennichiteStatus Position::testSennichite(bool cuteChessWorkaround, std::span<const u64> keyHistory, i32 limit)
         const {
         const auto end = std::max(0, static_cast<i32>(keyHistory.size()) - limit - 1);

@@ -21,7 +21,7 @@
 namespace stoat {
     ThreadData::ThreadData() {
         keyHistory.reserve(1024);
-        stack.resize(kMaxDepth);
+        stack.resize(kMaxDepth + 1);
     }
 
     void ThreadData::reset(const Position& newRootPos, std::span<const u64> newKeyHistory) {
@@ -36,11 +36,22 @@ namespace stoat {
         stats.nodes.store(0);
     }
 
-    std::pair<Position, ThreadPosGuard> ThreadData::applyMove(const Position& pos, Move move) {
+    std::pair<Position, ThreadPosGuard> ThreadData::applyMove(i32 ply, const Position& pos, Move move) {
+        stack[ply].move = move;
         keyHistory.push_back(pos.key());
         return std::pair<Position, ThreadPosGuard>{
             std::piecewise_construct,
             std::forward_as_tuple(pos.applyMove(move)),
+            std::forward_as_tuple(keyHistory)
+        };
+    }
+
+    std::pair<Position, ThreadPosGuard> ThreadData::applyNullMove(i32 ply, const Position& pos) {
+        stack[ply].move = kNullMove;
+        keyHistory.push_back(pos.key());
+        return std::pair<Position, ThreadPosGuard>{
+            std::piecewise_construct,
+            std::forward_as_tuple(pos.applyNullMove()),
             std::forward_as_tuple(keyHistory)
         };
     }

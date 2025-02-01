@@ -65,6 +65,7 @@ namespace stoat {
 
     struct StackFrame {
         PvList pv{};
+        Move move{};
     };
 
     struct alignas(kCacheLineSize) ThreadData {
@@ -116,6 +117,7 @@ namespace stoat {
 
         void reset(const Position& newRootPos, std::span<const u64> newKeyHistory);
 
-        [[nodiscard]] std::pair<Position, ThreadPosGuard> applyMove(const Position& pos, Move move);
+        [[nodiscard]] std::pair<Position, ThreadPosGuard> applyMove(i32 ply, const Position& pos, Move move);
+        [[nodiscard]] std::pair<Position, ThreadPosGuard> applyNullMove(i32 ply, const Position& pos);
     };
 } // namespace stoat

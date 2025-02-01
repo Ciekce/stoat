@@ -97,6 +97,7 @@ namespace stoat {
         Position(Position&&) = default;
 
         [[nodiscard]] Position applyMove(Move move) const;
+        [[nodiscard]] Position applyNullMove() const;
 
         [[nodiscard]] inline Bitboard occupancy() const {
             return m_colors[0] | m_colors[1];
