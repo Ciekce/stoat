@@ -19,13 +19,33 @@
 #include "search.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include "eval/eval.h"
 #include "movepick.h"
 #include "protocol/handler.h"
+#include "util/multi_array.h"
 
 namespace stoat {
     namespace {
+        // [depth][move index]
+        auto s_lmrTable = [] {
+            constexpr f64 kBase = 0.2;
+            constexpr f64 kDivisor = 3.5;
+
+            util::MultiArray<i32, 256, 64> reductions{};
+
+            for (i32 depth = 1; depth < 256; ++depth) {
+                for (i32 moveNumber = 1; moveNumber < 64; ++moveNumber) {
+                    const auto lnDepth = std::log(static_cast<f64>(depth));
+                    const auto lnMoveNumber = std::log(static_cast<f64>(moveNumber));
+                    reductions[depth][moveNumber] = static_cast<i32>(kBase + lnDepth * lnMoveNumber / kDivisor);
+                }
+            }
+
+            return reductions;
+        }();
+
         void generateLegal(movegen::MoveList& dst, const Position& pos) {
             movegen::MoveList generated{};
             movegen::generateAll(generated, pos);
@@ -37,7 +57,7 @@ namespace stoat {
             }
         }
 
-        inline Score drawScore(usize nodes) {
+        [[nodiscard]] constexpr Score drawScore(usize nodes) {
             return 2 - static_cast<Score>(nodes % 4);
         }
     } // namespace
@@ -367,6 +387,8 @@ namespace stoat {
                 continue;
             }
 
+            const auto baseLmr = s_lmrTable[depth][std::min<u32>(legalMoves, 63)];
+
             if constexpr (kPvNode) {
                 curr.pv.length = 0;
             }
@@ -384,7 +406,16 @@ namespace stoat {
             } else if (sennichite == SennichiteStatus::kDraw) {
                 score = drawScore(thread.loadNodes());
             } else {
-                if (!kPvNode || legalMoves > 1) {
+                const auto newDepth = depth - 1;
+
+                if (depth >= 2 && legalMoves >= 5 + 2 * kRootNode && generator.stage() >= MovegenStage::NonCaptures) {
+                    const auto reduced = std::min(std::max(newDepth - baseLmr, 1), newDepth - 1);
+                    score = -search(thread, newPos, curr.pv, reduced, ply + 1, -alpha - 1, -alpha);
+
+                    if (score > alpha && reduced < newDepth) {
+                        score = -search(thread, newPos, curr.pv, newDepth, ply + 1, -alpha - 1, -alpha);
+                    }
+                } else if (!kPvNode || legalMoves > 1) {
                     score = -search(thread, newPos, curr.pv, depth - 1, ply + 1, -alpha - 1, -alpha);
                 }
 
