@@ -367,6 +367,13 @@ namespace stoat {
             return ttEntry.score;
         }
 
+        if (!kPvNode && !pos.isInCheck()) {
+            const auto staticEval = eval::staticEval(pos);
+            if (depth <= 4 && staticEval - 120 * depth >= beta) {
+                return staticEval;
+            }
+        }
+
         auto bestMove = kNullMove;
         auto bestScore = -kScoreInf;
 

@@ -21,6 +21,6 @@
 #include "types.h"
 
 namespace stoat::bench {
-    constexpr i32 kDefaultBenchDepth = 7;
+    constexpr i32 kDefaultBenchDepth = 8;
     void run(i32 depth = kDefaultBenchDepth);
 } // namespace stoat::bench
