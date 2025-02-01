@@ -29,7 +29,7 @@
 namespace stoat {
     namespace {
         // [depth][move index]
-        auto s_lmrTable = [] {
+        const auto s_lmrTable = [] {
             constexpr f64 kBase = 0.2;
             constexpr f64 kDivisor = 3.5;
 
@@ -39,6 +39,7 @@ namespace stoat {
                 for (i32 moveNumber = 1; moveNumber < 64; ++moveNumber) {
                     const auto lnDepth = std::log(static_cast<f64>(depth));
                     const auto lnMoveNumber = std::log(static_cast<f64>(moveNumber));
+
                     reductions[depth][moveNumber] = static_cast<i32>(kBase + lnDepth * lnMoveNumber / kDivisor);
                 }
             }
