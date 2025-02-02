@@ -368,6 +368,10 @@ namespace stoat {
             return ttEntry.score;
         }
 
+        if (depth >= 3 && !ttEntry.move) {
+            --depth;
+        }
+
         if (!kPvNode && !pos.isInCheck()) {
             const auto staticEval = eval::staticEval(pos);
 
