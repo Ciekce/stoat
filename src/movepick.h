@@ -35,8 +35,6 @@ namespace stoat {
         NonCaptures,
         QsearchGenerateCaptures,
         QsearchCaptures,
-        QsearchGenerateRecaptures,
-        QsearchRecaptures,
         End,
     };
 
@@ -58,10 +56,10 @@ namespace stoat {
         }
 
         [[nodiscard]] static MoveGenerator main(const Position& pos, Move ttMove);
-        [[nodiscard]] static MoveGenerator qsearch(const Position& pos, Square captureSq);
+        [[nodiscard]] static MoveGenerator qsearch(const Position& pos);
 
     private:
-        MoveGenerator(MovegenStage initialStage, const Position& pos, Move ttMove, Square captureSq);
+        MoveGenerator(MovegenStage initialStage, const Position& pos, Move ttMove);
 
         [[nodiscard]] inline Move selectNext(auto predicate) {
             while (m_idx < m_end) {
@@ -80,8 +78,6 @@ namespace stoat {
         movegen::MoveList m_moves{};
 
         Move m_ttMove;
-
-        Square m_captureSq;
 
         usize m_idx{};
         usize m_end{};
