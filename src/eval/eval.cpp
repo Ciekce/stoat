@@ -80,6 +80,23 @@ namespace stoat::eval {
 
             return kKingRingPieceScale * static_cast<i32>(std::pow(filled, 1.6));
         }
+
+        [[nodiscard]] Score evalCampControl(const Position& pos, Color c) {
+            const auto occ = pos.occupancy();
+
+            auto undefended = Bitboards::promoArea(c.flip());
+
+            auto pieces = pos.colorBb(c);
+            while (!pieces.empty() && !undefended.empty()) {
+                const auto sq = pieces.popLsb();
+                const auto piece = pos.pieceOn(sq).type();
+
+                const auto attacks = attacks::pieceAttacks(piece, sq, c, occ);
+                undefended &= ~attacks;
+            }
+
+            return -70 * undefended.popcount();
+        }
     } // namespace
 
     Score staticEval(const Position& pos) {
@@ -90,6 +107,7 @@ namespace stoat::eval {
 
         score += evalMaterial(pos, stm) - evalMaterial(pos, nstm);
         score += evalKingSafety(pos, stm) - evalKingSafety(pos, nstm);
+        score += evalCampControl(pos, stm) - evalCampControl(pos, nstm);
 
         return std::clamp(score, -kScoreWin + 1, kScoreWin - 1);
     }
