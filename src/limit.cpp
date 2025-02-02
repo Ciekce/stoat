@@ -53,7 +53,7 @@ namespace stoat::limit {
     TimeManager::TimeManager(util::Instant startTime, const TimeLimits& limits) :
             m_startTime{startTime} {
         const auto remaining = limits.remaining - kMoveOverhead;
-        const auto maxTime = remaining * 0.05 + limits.increment + 0.5;
+        const auto maxTime = remaining * 0.05 + limits.increment * 0.5;
 
         m_maxTime = std::min(maxTime, remaining);
     }
