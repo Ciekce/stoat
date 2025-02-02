@@ -25,7 +25,8 @@
 #include "util/static_vector.h"
 
 namespace stoat::movegen {
-    using MoveList = util::StaticVector<Move, 600>;
+    constexpr usize kMoveListCapacity = 600;
+    using MoveList = util::StaticVector<Move, kMoveListCapacity>;
 
     void generateAll(MoveList& dst, const Position& pos);
     void generateCaptures(MoveList& dst, const Position& pos);
