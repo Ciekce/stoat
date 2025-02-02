@@ -517,6 +517,17 @@ namespace stoat {
             return pos.isInCheck() ? 0 : eval::staticEval(pos);
         }
 
+        tt::ProbedEntry ttEntry{};
+        const bool ttHit = m_ttable.probe(ttEntry, pos.key(), ply);
+
+        if (!kPvNode
+            && (ttEntry.flag == tt::Flag::kExact                                   //
+                || ttEntry.flag == tt::Flag::kUpperBound && ttEntry.score <= alpha //
+                || ttEntry.flag == tt::Flag::kLowerBound && ttEntry.score >= beta))
+        {
+            return ttEntry.score;
+        }
+
         const auto staticEval = eval::staticEval(pos);
 
         if (staticEval >= beta) {
