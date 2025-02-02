@@ -121,7 +121,16 @@ namespace stoat {
         }
 
         template <bool kPvNode = false, bool kRootNode = false>
-        Score search(ThreadData& thread, const Position& pos, PvList& pv, i32 depth, i32 ply, Score alpha, Score beta);
+        Score search(
+            ThreadData& thread,
+            const Position& pos,
+            PvList& pv,
+            i32 depth,
+            i32 ply,
+            Score alpha,
+            Score beta,
+            bool expectedCutnode
+        );
 
         template <>
         Score search<false, true>(
@@ -131,7 +140,8 @@ namespace stoat {
             i32 depth,
             i32 ply,
             Score alpha,
-            Score beta
+            Score beta,
+            bool expectedCutnode
         ) = delete;
 
         template <bool kPvNode = false>
