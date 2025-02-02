@@ -397,6 +397,8 @@ namespace stoat {
             }
         }
 
+        util::StaticVector<Move, 32> nonCapturesTried{};
+
         auto bestMove = kNullMove;
         auto bestScore = -kScoreInf;
 
@@ -483,6 +485,10 @@ namespace stoat {
                 ttFlag = tt::Flag::kLowerBound;
                 break;
             }
+
+            if (move != bestMove && !pos.isCapture(move) && nonCapturesTried.size() < nonCapturesTried.capacity()) {
+                nonCapturesTried.push(move);
+            }
         }
 
         if (legalMoves == 0) {
@@ -493,6 +499,10 @@ namespace stoat {
         if (bestMove && !pos.isCapture(bestMove)) {
             const auto bonus = historyBonus(depth);
             thread.history.updateNonCaptureScore(bestMove, bonus);
+
+            for (const auto prevNonCapture : nonCapturesTried) {
+                thread.history.updateNonCaptureScore(prevNonCapture, -bonus);
+            }
         }
 
         m_ttable.put(pos.key(), bestScore, bestMove, depth, ply, ttFlag);
