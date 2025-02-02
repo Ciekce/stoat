@@ -96,6 +96,8 @@ namespace stoat::limit {
 
     private:
         util::Instant m_startTime;
+
+        f64 m_optTime;
         f64 m_maxTime;
     };
 } // namespace stoat::limit

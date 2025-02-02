@@ -53,13 +53,16 @@ namespace stoat::limit {
     TimeManager::TimeManager(util::Instant startTime, const TimeLimits& limits) :
             m_startTime{startTime} {
         const auto remaining = limits.remaining - kMoveOverhead;
-        const auto maxTime = remaining * 0.05 + limits.increment * 0.5;
 
-        m_maxTime = std::min(maxTime, remaining);
+        const auto baseTime = std::min(remaining * 0.05 + limits.increment * 0.5, remaining);
+        const auto optTime = baseTime * 0.6;
+
+        m_maxTime = remaining * 0.6;
+        m_optTime = std::min(optTime, m_maxTime);
     }
 
     bool TimeManager::stopSoft(usize nodes) {
-        return m_startTime.elapsed() >= m_maxTime;
+        return m_startTime.elapsed() >= m_optTime;
     }
 
     bool TimeManager::stopHard(usize nodes) {
@@ -67,6 +70,6 @@ namespace stoat::limit {
             return false;
         }
 
-        return stopSoft(nodes);
+        return m_startTime.elapsed() >= m_maxTime;
     }
 } // namespace stoat::limit
