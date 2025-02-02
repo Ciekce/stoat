@@ -74,9 +74,15 @@ namespace stoat {
     }
 
     void Searcher::newGame() {
+        assert(!isSearching());
+
         // Finalisation (init) clears the TT, so don't clear it twice
         if (!m_ttable.finalize()) {
             m_ttable.clear();
+        }
+
+        for (auto& thread : m_threads) {
+            thread.history.clear();
         }
     }
 
@@ -396,7 +402,7 @@ namespace stoat {
 
         auto ttFlag = tt::Flag::kUpperBound;
 
-        auto generator = MoveGenerator::main(pos, ttEntry.move);
+        auto generator = MoveGenerator::main(pos, ttEntry.move, thread.history);
 
         u32 legalMoves{};
 
@@ -482,6 +488,11 @@ namespace stoat {
         if (legalMoves == 0) {
             assert(!kRootNode);
             return -kScoreMate + ply;
+        }
+
+        if (bestMove && !pos.isCapture(bestMove)) {
+            const auto bonus = historyBonus(depth);
+            thread.history.updateNonCaptureScore(bestMove, bonus);
         }
 
         m_ttable.put(pos.key(), bestScore, bestMove, depth, ply, ttFlag);
