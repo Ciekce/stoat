@@ -278,6 +278,23 @@ namespace stoat {
         static constexpr PieceType kNone{PieceType::kNoneId};
 
         static constexpr usize kCount = kNone.idx();
+
+        static constexpr std::array kAll = {
+            kPawn,
+            kPromotedPawn,
+            kLance,
+            kKnight,
+            kPromotedLance,
+            kPromotedKnight,
+            kSilver,
+            kPromotedSilver,
+            kGold,
+            kBishop,
+            kRook,
+            kPromotedBishop,
+            kPromotedRook,
+            kKing,
+        };
     };
 
     class Piece {
@@ -302,6 +319,10 @@ namespace stoat {
 
         [[nodiscard]] constexpr PieceType type() const {
             assert(m_id != kNoneId);
+            return PieceType::fromRaw(m_id >> 1);
+        }
+
+        [[nodiscard]] constexpr PieceType typeOrNone() const {
             return PieceType::fromRaw(m_id >> 1);
         }
 

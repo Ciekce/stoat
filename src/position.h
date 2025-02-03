@@ -182,6 +182,8 @@ namespace stoat {
 
         [[nodiscard]] Bitboard attackersTo(Square sq, Color attacker) const;
 
+        [[nodiscard]] Bitboard allAttackersTo(Square sq, Bitboard occ) const;
+
         [[nodiscard]] std::string sfen() const;
 
         void regenKey();

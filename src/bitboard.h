@@ -211,6 +211,11 @@ namespace stoat {
             return Square::fromRaw(idx);
         }
 
+        [[nodiscard]] constexpr Bitboard isolateLsb() const {
+            const auto bit = m_bb & -m_bb;
+            return Bitboard{bit};
+        }
+
         constexpr Square popLsb() {
             const auto square = lsb();
             m_bb &= m_bb - 1;

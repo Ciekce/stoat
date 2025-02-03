@@ -577,6 +577,56 @@ namespace stoat {
         return attackers;
     }
 
+    Bitboard Position::allAttackersTo(Square sq, Bitboard occ) const {
+        assert(sq);
+
+        Bitboard attackers{};
+
+        const auto black = colorBb(Colors::kBlack);
+        const auto white = colorBb(Colors::kWhite);
+
+        const auto horses = pieceTypeBb(PieceTypes::kPromotedBishop);
+        const auto dragons = pieceTypeBb(PieceTypes::kPromotedRook);
+
+        const auto pawns = pieceTypeBb(PieceTypes::kPawn);
+
+        attackers |= pawns & black & attacks::pawnAttacks(sq, Colors::kWhite);
+        attackers |= pawns & white & attacks::pawnAttacks(sq, Colors::kBlack);
+
+        const auto lances = pieceTypeBb(PieceTypes::kLance);
+
+        attackers |= lances & black & attacks::lanceAttacks(sq, Colors::kWhite, occ);
+        attackers |= lances & white & attacks::lanceAttacks(sq, Colors::kBlack, occ);
+
+        const auto knights = pieceTypeBb(PieceTypes::kKnight);
+
+        attackers |= knights & black & attacks::knightAttacks(sq, Colors::kWhite);
+        attackers |= knights & white & attacks::knightAttacks(sq, Colors::kBlack);
+
+        const auto silvers = pieceTypeBb(PieceTypes::kSilver);
+
+        attackers |= silvers & black & attacks::silverAttacks(sq, Colors::kWhite);
+        attackers |= silvers & white & attacks::silverAttacks(sq, Colors::kBlack);
+
+        const auto golds = pieceTypeBb(PieceTypes::kGold) | pieceTypeBb(PieceTypes::kPromotedPawn)
+                         | pieceTypeBb(PieceTypes::kPromotedLance) | pieceTypeBb(PieceTypes::kPromotedKnight)
+                         | pieceTypeBb(PieceTypes::kPromotedSilver);
+
+        attackers |= golds & black & attacks::goldAttacks(sq, Colors::kWhite);
+        attackers |= golds & white & attacks::goldAttacks(sq, Colors::kBlack);
+
+        const auto bishops = horses | pieceTypeBb(PieceTypes::kBishop);
+        attackers |= bishops & attacks::bishopAttacks(sq, occ);
+
+        const auto rooks = dragons | pieceTypeBb(PieceTypes::kRook);
+        attackers |= rooks & attacks::rookAttacks(sq, occ);
+
+        const auto kings = horses | dragons | pieceTypeBb(PieceTypes::kKing);
+        attackers |= kings & attacks::kingAttacks(sq);
+
+        return attackers;
+    }
+
     std::string Position::sfen() const {
         std::ostringstream sfen{};
 
