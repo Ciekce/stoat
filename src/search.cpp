@@ -24,6 +24,7 @@
 #include "eval/eval.h"
 #include "movepick.h"
 #include "protocol/handler.h"
+#include "see.h"
 #include "util/multi_array.h"
 
 namespace stoat {
@@ -413,6 +414,12 @@ namespace stoat {
             }
 
             const auto baseLmr = s_lmrTable[depth][std::min<u32>(legalMoves, 63)];
+
+            if (!kRootNode && bestScore > -kScoreWin) {
+                if (!pos.isCapture(move) && !see::see(pos, move, -20 * depth * depth)) {
+                    continue;
+                }
+            }
 
             if constexpr (kPvNode) {
                 curr.pv.length = 0;
