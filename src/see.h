@@ -60,7 +60,6 @@ namespace stoat::see {
             0, // none
         };
 
-        assert(pt);
         return kValues[pt.idx()];
     }
 

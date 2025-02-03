@@ -91,7 +91,7 @@ namespace stoat::see {
             return false;
         }
 
-        auto next = pos.pieceOn(move.from()).type();
+        auto next = move.isDrop() ? move.dropPiece() : pos.pieceOn(move.from()).type();
 
         score -= pieceValue(next);
 
