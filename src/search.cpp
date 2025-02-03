@@ -497,14 +497,7 @@ namespace stoat {
     }
 
     template <bool kPvNode>
-    Score Searcher::qsearch(
-        ThreadData& thread,
-        const Position& pos,
-        i32 ply,
-        Score alpha,
-        Score beta,
-        Square captureSq
-    ) {
+    Score Searcher::qsearch(ThreadData& thread, const Position& pos, i32 ply, Score alpha, Score beta) {
         assert(ply >= 0 && ply <= kMaxDepth);
 
         if (thread.isMainThread() && thread.rootDepth > 1) {
@@ -536,13 +529,19 @@ namespace stoat {
 
         auto bestScore = staticEval;
 
-        auto generator = MoveGenerator::qsearch(pos, captureSq);
+        auto generator = MoveGenerator::qsearch(pos);
 
         while (const auto move = generator.next()) {
             assert(pos.isPseudolegal(move));
 
             if (!pos.isLegal(move)) {
                 continue;
+            }
+
+            if (bestScore > -kScoreWin) {
+                if (!see::see(pos, move, -100)) {
+                    continue;
+                }
             }
 
             const auto [newPos, guard] = thread.applyMove(ply, pos, move);
@@ -556,7 +555,7 @@ namespace stoat {
             } else if (sennichite == SennichiteStatus::kDraw) {
                 score = drawScore(thread.loadNodes());
             } else {
-                score = -qsearch<kPvNode>(thread, newPos, ply + 1, -beta, -alpha, move.to());
+                score = -qsearch<kPvNode>(thread, newPos, ply + 1, -beta, -alpha);
             }
 
             if (score > bestScore) {
