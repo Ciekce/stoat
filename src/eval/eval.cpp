@@ -28,6 +28,8 @@ namespace stoat::eval {
     namespace {
         constexpr Score kKingRingPieceScale = 8;
 
+        constexpr Score kTempo = 12;
+
         [[nodiscard]] Score evalMaterial(const Position& pos, Color c) {
             const auto materialCount = [&](PieceType pt) {
                 const auto count = pos.pieceBb(pt, c).popcount();
@@ -91,6 +93,6 @@ namespace stoat::eval {
         score += evalMaterial(pos, stm) - evalMaterial(pos, nstm);
         score += evalKingSafety(pos, stm) - evalKingSafety(pos, nstm);
 
-        return std::clamp(score, -kScoreWin + 1, kScoreWin - 1);
+        return std::clamp(score + kTempo, -kScoreWin + 1, kScoreWin - 1);
     }
 } // namespace stoat::eval
