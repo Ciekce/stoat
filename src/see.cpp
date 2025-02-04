@@ -25,8 +25,10 @@
 namespace stoat::see {
     namespace {
         [[nodiscard]] i32 gain(const Position& pos, Move move) {
+            // perhaps unintuitively, dropping a piece does not actually
+            // change the material balance, so it does not gain anything
             if (move.isDrop()) {
-                return pieceValue(move.dropPiece());
+                return 0;
             }
 
             const auto captured = pos.pieceOn(move.to());
