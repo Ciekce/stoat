@@ -373,14 +373,27 @@ namespace stoat {
             --depth;
         }
 
-        if (!kPvNode && !pos.isInCheck()) {
-            const auto staticEval = eval::staticEval(pos);
+        curr.staticEval = pos.isInCheck() ? kScoreNone : eval::staticEval(pos);
 
-            if (depth <= 4 && staticEval - 120 * depth >= beta) {
-                return staticEval;
+        if (!kPvNode && !pos.isInCheck()) {
+            const bool improving = [&] {
+                if (pos.isInCheck()) {
+                    return false;
+                }
+                if (ply > 1 && thread.stack[ply - 2].staticEval != kScoreNone) {
+                    return curr.staticEval > thread.stack[ply - 2].staticEval;
+                }
+                if (ply > 3 && thread.stack[ply - 4].staticEval != kScoreNone) {
+                    return curr.staticEval > thread.stack[ply - 4].staticEval;
+                }
+                return true;
+            }();
+
+            if (depth <= 4 && curr.staticEval - 120 * (depth - improving) >= beta) {
+                return curr.staticEval;
             }
 
-            if (depth >= 4 && staticEval >= beta && !parent->move.isNull()) {
+            if (depth >= 4 && curr.staticEval >= beta && !parent->move.isNull()) {
                 static constexpr i32 kR = 3;
 
                 const auto [newPos, guard] = thread.applyNullMove(ply, pos);
