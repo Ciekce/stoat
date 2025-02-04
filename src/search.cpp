@@ -381,10 +381,10 @@ namespace stoat {
             }
 
             if (depth >= 4 && staticEval >= beta && !parent->move.isNull()) {
-                static constexpr i32 kR = 3;
+                const auto r = 3 + depth / 5;
 
                 const auto [newPos, guard] = thread.applyNullMove(ply, pos);
-                const auto score = -search(thread, newPos, curr.pv, depth - kR, ply + 1, -beta, -beta + 1);
+                const auto score = -search(thread, newPos, curr.pv, depth - r, ply + 1, -beta, -beta + 1);
 
                 if (score >= beta) {
                     return score > kScoreWin ? beta : score;
