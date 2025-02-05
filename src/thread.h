@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "core.h"
+#include "correction.h"
 #include "position.h"
 #include "pv.h"
 
@@ -88,6 +89,8 @@ namespace stoat {
         PvList lastPv{};
 
         std::vector<StackFrame> stack{};
+
+        CorrectionHistoryTable correctionHistory{};
 
         [[nodiscard]] inline u32 isMainThread() const {
             return id == 0;

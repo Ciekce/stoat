@@ -79,6 +79,10 @@ namespace stoat {
         if (!m_ttable.finalize()) {
             m_ttable.clear();
         }
+
+        for (auto& thread : m_threads) {
+            thread.correctionHistory.clear();
+        }
     }
 
     void Searcher::ensureReady() {
@@ -373,7 +377,13 @@ namespace stoat {
             --depth;
         }
 
-        const auto staticEval = eval::staticEval(pos);
+        auto rawEval = kScoreNone;
+        auto staticEval = kScoreNone;
+
+        if (!pos.isInCheck()) {
+            rawEval = eval::staticEval(pos);
+            staticEval = thread.correctionHistory.correct(pos, rawEval);
+        }
 
         if (!kPvNode && !pos.isInCheck()) {
             if (depth <= 4 && staticEval - 120 * depth >= beta) {
@@ -500,6 +510,14 @@ namespace stoat {
             return -kScoreMate + ply;
         }
 
+        if (!pos.isInCheck() && (bestMove.isNull() || !pos.isCapture(bestMove))
+            && (ttFlag == tt::Flag::kExact                                   //
+                || ttFlag == tt::Flag::kUpperBound && bestScore < staticEval //
+                || ttFlag == tt::Flag::kLowerBound && bestScore > staticEval))
+        {
+            thread.correctionHistory.update(pos, depth, bestScore, staticEval);
+        }
+
         m_ttable.put(pos.key(), bestScore, bestMove, depth, ply, ttFlag);
 
         return bestScore;
@@ -526,7 +544,8 @@ namespace stoat {
             return pos.isInCheck() ? 0 : eval::staticEval(pos);
         }
 
-        const auto staticEval = eval::staticEval(pos);
+        const auto rawEval = eval::staticEval(pos);
+        const auto staticEval = thread.correctionHistory.correct(pos, rawEval);
 
         if (staticEval >= beta) {
             return staticEval;

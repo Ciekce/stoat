@@ -184,19 +184,34 @@ namespace stoat {
 
     void PositionKeys::clear() {
         all = 0;
+        pawn = 0;
     }
 
     void PositionKeys::flipPiece(Piece piece, Square sq) {
         assert(piece);
         assert(sq);
-        all ^= keys::pieceSquare(piece, sq);
+
+        const auto key = keys::pieceSquare(piece, sq);
+
+        all ^= key;
+
+        if (piece.type() == PieceTypes::kPawn) {
+            pawn ^= key;
+        }
     }
 
     void PositionKeys::movePiece(Piece piece, Square from, Square to) {
         assert(piece);
         assert(from);
         assert(to);
-        all ^= keys::pieceSquare(piece, from) ^ keys::pieceSquare(piece, to);
+
+        const auto key = keys::pieceSquare(piece, from) ^ keys::pieceSquare(piece, to);
+
+        all ^= key;
+
+        if (piece.type() == PieceTypes::kPawn) {
+            pawn ^= key;
+        }
     }
 
     void PositionKeys::flipStm() {
@@ -207,7 +222,14 @@ namespace stoat {
         assert(c);
         assert(pt);
         assert(count <= maxPiecesInHand(pt));
-        all ^= keys::pieceInHand(c, pt, count);
+
+        const auto key = keys::pieceInHand(c, pt, count);
+
+        all ^= key;
+
+        if (pt == PieceTypes::kPawn) {
+            pawn ^= key;
+        }
     }
 
     void PositionKeys::switchHandCount(Color c, PieceType pt, u32 before, u32 after) {
@@ -215,7 +237,14 @@ namespace stoat {
         assert(pt);
         assert(before <= maxPiecesInHand(pt));
         assert(after <= maxPiecesInHand(pt));
-        all ^= keys::pieceInHand(c, pt, before) ^ keys::pieceInHand(c, pt, after);
+
+        const auto key = keys::pieceInHand(c, pt, before) ^ keys::pieceInHand(c, pt, after);
+
+        all ^= key;
+
+        if (pt == PieceTypes::kPawn) {
+            pawn ^= key;
+        }
     }
 
     Position::Position() {
