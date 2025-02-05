@@ -118,17 +118,21 @@ namespace stoat::tt {
         assert(depth >= 0);
         assert(depth <= kMaxDepth);
 
-        auto& entry = m_entries[index(key)];
+        const auto packedKey = packEntryKey(key);
 
-        auto newEntry = entry;
+        auto& slot = m_entries[index(key)];
+        auto entry = slot;
 
-        newEntry.key = packEntryKey(key);
-        newEntry.score = static_cast<i16>(scoreToTt(score, ply));
-        newEntry.move = move;
-        newEntry.depth = static_cast<u8>(depth);
-        newEntry.flag = flag;
+        if (move || entry.key != packedKey) {
+            entry.move = move;
+        }
 
-        entry = newEntry;
+        entry.key = packedKey;
+        entry.score = static_cast<i16>(scoreToTt(score, ply));
+        entry.depth = static_cast<u8>(depth);
+        entry.flag = flag;
+
+        slot = entry;
     }
 
     void TTable::clear() {
