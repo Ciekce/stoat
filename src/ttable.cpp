@@ -104,7 +104,7 @@ namespace stoat::tt {
             dst.score = scoreFromTt(static_cast<Score>(entry.score), ply);
             dst.move = entry.move;
             dst.depth = static_cast<i32>(entry.depth);
-            dst.flag = entry.flag;
+            dst.flag = entry.flag();
 
             return true;
         }
@@ -118,22 +118,35 @@ namespace stoat::tt {
         assert(depth >= 0);
         assert(depth <= kMaxDepth);
 
-        auto& entry = m_entries[index(key)];
+        const auto packedKey = packEntryKey(key);
 
-        auto newEntry = entry;
+        auto& slot = m_entries[index(key)];
+        auto entry = slot;
 
-        newEntry.key = packEntryKey(key);
-        newEntry.score = static_cast<i16>(scoreToTt(score, ply));
-        newEntry.move = move;
-        newEntry.depth = static_cast<u8>(depth);
-        newEntry.flag = flag;
+        const bool replace =
+            flag == Flag::kExact || packedKey != entry.key || entry.age() != m_age || depth + 3 > entry.depth;
 
-        entry = newEntry;
+        if (!replace) {
+            return;
+        }
+
+        entry.key = packEntryKey(key);
+        entry.score = static_cast<i16>(scoreToTt(score, ply));
+        entry.move = move;
+        entry.depth = static_cast<u8>(depth);
+        entry.setAgeFlag(m_age, flag);
+
+        slot = entry;
+    }
+
+    void TTable::incAge() {
+        m_age = (m_age + 1) % Entry::kAgeCycle;
     }
 
     void TTable::clear() {
         assert(!m_pendingInit);
         std::memset(m_entries, 0, m_entryCount * sizeof(Entry));
+        m_age = 0;
     }
 
     u32 TTable::fullPermille() const {
@@ -143,7 +156,7 @@ namespace stoat::tt {
 
         for (usize i = 0; i < 1000; ++i) {
             const auto entry = m_entries[i];
-            if (entry.flag != Flag::kNone) {
+            if (entry.flag() != Flag::kNone && entry.age() == m_age) {
                 ++filledEntries;
             }
         }

@@ -310,6 +310,8 @@ namespace stoat {
 
             finalReport(m_startTime.elapsed());
 
+            m_ttable.incAge();
+
             m_limiter = nullptr;
             m_searching = false;
         } else {
