@@ -35,41 +35,45 @@ namespace stoat::eval {
                 return count * pieceValue(pt);
             };
 
-            Score score{};
+            Score boardScore{};
 
-            score += materialCount(PieceTypes::kPawn);
-            score += materialCount(PieceTypes::kPromotedPawn);
-            score += materialCount(PieceTypes::kLance);
-            score += materialCount(PieceTypes::kKnight);
-            score += materialCount(PieceTypes::kPromotedLance);
-            score += materialCount(PieceTypes::kPromotedKnight);
-            score += materialCount(PieceTypes::kSilver);
-            score += materialCount(PieceTypes::kPromotedSilver);
-            score += materialCount(PieceTypes::kGold);
-            score += materialCount(PieceTypes::kBishop);
-            score += materialCount(PieceTypes::kRook);
-            score += materialCount(PieceTypes::kPromotedBishop);
-            score += materialCount(PieceTypes::kPromotedRook);
+            boardScore += materialCount(PieceTypes::kPawn);
+            boardScore += materialCount(PieceTypes::kPromotedPawn);
+            boardScore += materialCount(PieceTypes::kLance);
+            boardScore += materialCount(PieceTypes::kKnight);
+            boardScore += materialCount(PieceTypes::kPromotedLance);
+            boardScore += materialCount(PieceTypes::kPromotedKnight);
+            boardScore += materialCount(PieceTypes::kSilver);
+            boardScore += materialCount(PieceTypes::kPromotedSilver);
+            boardScore += materialCount(PieceTypes::kGold);
+            boardScore += materialCount(PieceTypes::kBishop);
+            boardScore += materialCount(PieceTypes::kRook);
+            boardScore += materialCount(PieceTypes::kPromotedBishop);
+            boardScore += materialCount(PieceTypes::kPromotedRook);
 
             const auto& hand = pos.hand(c);
 
             if (hand.empty()) {
-                return score;
+                return boardScore;
             }
 
-            const auto handPieceValue = [&](PieceType pt) {
-                return static_cast<i32>(hand.count(pt)) * pieceValue(pt) * 17 / 16;
-            };
+            const auto handPieceValue = [&](PieceType pt) { return static_cast<i32>(hand.count(pt)) * pieceValue(pt); };
 
-            score += handPieceValue(PieceTypes::kPawn);
-            score += handPieceValue(PieceTypes::kLance);
-            score += handPieceValue(PieceTypes::kKnight);
-            score += handPieceValue(PieceTypes::kSilver);
-            score += handPieceValue(PieceTypes::kGold);
-            score += handPieceValue(PieceTypes::kBishop);
-            score += handPieceValue(PieceTypes::kRook);
+            Score handScore{};
 
-            return score;
+            handScore += handPieceValue(PieceTypes::kPawn);
+            handScore += handPieceValue(PieceTypes::kLance);
+            handScore += handPieceValue(PieceTypes::kKnight);
+            handScore += handPieceValue(PieceTypes::kSilver);
+            handScore += handPieceValue(PieceTypes::kGold);
+            handScore += handPieceValue(PieceTypes::kBishop);
+            handScore += handPieceValue(PieceTypes::kRook);
+
+            // Give a slight bonus to pieces in hand when
+            // there are few, but decay beyond 2000 points
+            handScore = (10000 * handScore) / (8000 + handScore);
+
+            return boardScore + handScore;
         }
 
         [[nodiscard]] Score evalKingSafety(const Position& pos, Color c) {
