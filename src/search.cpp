@@ -67,7 +67,7 @@ namespace stoat {
 
     Searcher::Searcher(usize ttSizeMb) :
             m_ttable{ttSizeMb} {
-        setThreads(1);
+        setThreadCount(1);
     }
 
     Searcher::~Searcher() {
@@ -86,7 +86,7 @@ namespace stoat {
         m_ttable.finalize();
     }
 
-    void Searcher::setThreads(u32 threadCount) {
+    void Searcher::setThreadCount(u32 threadCount) {
         assert(!isSearching());
 
         if (threadCount < 1) {

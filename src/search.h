@@ -38,6 +38,9 @@
 #include "util/timer.h"
 
 namespace stoat {
+    constexpr u32 kDefaultThreadCount = 1;
+    constexpr util::Range<u32> kThreadCountRange{1, 2048};
+
     struct BenchInfo {
         usize nodes{};
         f64 time{};
@@ -51,7 +54,7 @@ namespace stoat {
         void newGame();
         void ensureReady();
 
-        void setThreads(u32 threadCount);
+        void setThreadCount(u32 threadCount);
         void setTtSize(usize mib);
         void setCuteChessWorkaround(bool enabled);
 

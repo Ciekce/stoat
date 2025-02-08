@@ -81,7 +81,8 @@ namespace stoat::protocol {
 
         std::cout << "option name ";
         printOptionName(std::cout, "Threads");
-        std::cout << " type spin default 1 min 1 max 1\n";
+        std::cout << " type spin default " << kDefaultThreadCount << " min " << kThreadCountRange.min() << " max "
+                  << kThreadCountRange.max() << '\n';
 
         std::cout << "option name ";
         printOptionName(std::cout, "CuteChessWorkaround");
@@ -468,7 +469,12 @@ namespace stoat::protocol {
                 std::cerr << "Invalid hash size '" << value << "'" << std::endl;
             }
         } else if (name == "threads") {
-            //
+            if (const auto newThreads = util::tryParse<u32>(value)) {
+                const auto threads = kThreadCountRange.clamp(*newThreads);
+                m_state.searcher->setThreadCount(threads);
+            } else {
+                std::cerr << "Invalid thread count '" << value << "'" << std::endl;
+            }
         } else if (name == "cutechessworkaround") {
             if (const auto newCcWorkaround = util::tryParseBool(value)) {
                 m_state.searcher->setCuteChessWorkaround(*newCcWorkaround);
