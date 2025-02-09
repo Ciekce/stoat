@@ -334,6 +334,15 @@ namespace stoat {
             }
         }
 
+        if constexpr (!kRootNode) {
+            alpha = std::max(alpha, -kScoreMate + ply);
+            beta = std::min(beta, kScoreMate - ply - 1);
+
+            if (alpha >= beta) {
+                return alpha;
+            }
+        }
+
         if (depth <= 0) {
             return qsearch<kPvNode>(thread, pos, ply, alpha, beta);
         }
