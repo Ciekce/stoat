@@ -36,6 +36,10 @@ namespace stoat {
         constexpr Move(const Move&) = default;
         constexpr Move(Move&&) = default;
 
+        [[nodiscard]] constexpr u16 raw() const {
+            return m_move;
+        }
+
         [[nodiscard]] constexpr bool isDrop() const {
             return get(kDropFlagShift, kFlagMask) != 0;
         }
