@@ -20,29 +20,29 @@
 
 #include "../types.h"
 
+#include <array>
 #include <utility>
 #include <vector>
 
+#include "../util/u4array.h"
 #include "format.h"
 
 namespace stoat::datagen::format {
-    class Stoatpack final : IDataFormat {
-    public:
-        Stoatpack();
-        ~Stoatpack() final = default;
+    struct __attribute__((packed)) StoatformatRecord {
+        std::array<u128, 2> occ{};
+        util::U4Array<40> pieces{};
+        i16 score{};
+        u16 plyCount{};
+        [[maybe_unused]] std::array<std::byte, 8> _unused{};
 
-        void startStandard() final;
+        [[nodiscard]] Color stm() const;
+        void setStm(Color stm);
 
-        void pushUnscored(Move move) final;
-        void push(Move move, Score score) final;
+        [[nodiscard]] Outcome wdl() const;
+        void setWdl(Outcome wdl);
 
-        void writeAllWithOutcome(std::ostream& stream, Outcome outcome) final;
-
-    private:
-        using ScoredMove = std::pair<u16, i16>;
-        static_assert(sizeof(ScoredMove) == sizeof(u16) + sizeof(i16));
-
-        std::vector<u16> m_unscoredMoves{};
-        std::vector<ScoredMove> m_moves{};
+        [[nodiscard]] static StoatformatRecord pack(const Position& pos, i16 senteScore, Outcome wdl);
     };
+
+    static_assert(sizeof(StoatformatRecord) == 64);
 } // namespace stoat::datagen::format

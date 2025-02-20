@@ -24,7 +24,7 @@ add_executable(stoat-native src/main.cpp src/types.h src/core.h src/bitboard.h s
 	src/limit.cpp src/bench.h src/bench.cpp src/thread.h src/thread.cpp src/attacks/sliders/magics.h
 	src/attacks/sliders/black_magic.h src/attacks/sliders/black_magic.cpp src/ttable.h src/ttable.cpp src/util/align.h
 	src/util/range.h src/movepick.h src/movepick.cpp src/see.h src/see.cpp src/datagen/format.h src/datagen/stoatpack.h
-	src/datagen/stoatpack.cpp
+	src/datagen/stoatpack.cpp src/datagen/stoatformat.h src/datagen/stoatformat.cpp src/util/u4array.h
 )
 
 target_compile_options(stoat-native PUBLIC -march=native $<$<CONFIG:Release>:-flto>)

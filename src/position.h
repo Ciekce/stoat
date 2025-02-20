@@ -33,6 +33,12 @@
 namespace stoat {
     class Hand {
     public:
+        Hand() = default;
+
+        [[nodiscard]] constexpr u32 raw() const {
+            return m_hand;
+        }
+
         [[nodiscard]] inline bool empty() const {
             return m_hand == 0;
         }
@@ -44,11 +50,16 @@ namespace stoat {
 
         void set(PieceType pt, u32 count);
 
+        [[nodiscard]] static Hand fromRaw(u32 raw);
+
         [[nodiscard]] std::string sfen(bool uppercase) const;
 
         [[nodiscard]] bool operator==(const Hand&) const = default;
 
     private:
+        explicit Hand(u32 hand) :
+                m_hand{hand} {}
+
         u32 m_hand{};
 
         friend std::ostream& operator<<(std::ostream& stream, const Hand& hand);

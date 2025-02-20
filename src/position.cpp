@@ -117,6 +117,10 @@ namespace stoat {
         m_hand = (m_hand & ~mask) | (count << offset);
     }
 
+    Hand Hand::fromRaw(u32 raw) {
+        return Hand{raw};
+    }
+
     std::string Hand::sfen(bool uppercase) const {
         std::ostringstream sfen{};
 
