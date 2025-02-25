@@ -19,91 +19,278 @@
 #include "datagen.h"
 
 #include <atomic>
+#include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <sstream>
+#include <thread>
 
 #include "../limit.h"
+#include "../movegen.h"
 #include "../search.h"
 #include "../util/ctrlc.h"
+#include "../util/rng.h"
+#include "../util/static_vector.h"
+#include "../util/timer.h"
 #include "format/stoatpack.h"
 
 namespace stoat::datagen {
     namespace {
         constexpr usize kDatagenTtSizeMib = 16;
+        constexpr usize kReportInterval = 512;
+
+        constexpr usize kBaseRandomMoves = 7;
+        constexpr bool kRandomizeStartSide = true;
+
+        std::mutex s_printMutex{};
 
         std::atomic_bool s_stop{false};
+        std::atomic_flag s_error{};
 
         void initCtrlCHandler() {
             util::signal::addCtrlCHandler([] { s_stop.store(true); });
         }
+
+        [[nodiscard]] Move selectRandomLegal(
+            util::rng::Jsf64Rng& rng,
+            const Position& pos,
+            std::vector<u64>& keyHistory,
+            movegen::MoveList& moves
+        ) {
+            for (usize start = 0; start < moves.size(); ++start) {
+                const auto idx = start + rng.nextU32(moves.size() - start);
+                const auto move = moves[idx];
+
+                if (!pos.isLegal(move)) {
+                    continue;
+                }
+
+                keyHistory.push_back(pos.key());
+                const auto newPos = pos.applyMove(move);
+                const auto sennichite = newPos.testSennichite(false, keyHistory);
+                keyHistory.pop_back();
+
+                if (sennichite != SennichiteStatus::kWin) {
+                    return move;
+                }
+
+                std::swap(moves[start], moves[idx]);
+            }
+
+            return kNullMove;
+        }
+
+        [[nodiscard]] Position getStartpos(
+            util::rng::Jsf64Rng& rng,
+            std::vector<u64>& keyHistory,
+            format::IDataFormat& format
+        ) {
+            util::StaticVector<Move, kBaseRandomMoves + kRandomizeStartSide> randomMoves{};
+            util::StaticVector<u64, kBaseRandomMoves + kRandomizeStartSide> newKeys{};
+
+            Position pos{};
+
+            const usize count = kBaseRandomMoves + (kRandomizeStartSide ? (rng.nextU64() >> 63) : 0);
+
+            while (true) {
+                randomMoves.clear();
+                newKeys.clear();
+
+                pos = Position::startpos();
+
+                movegen::MoveList moves{};
+                bool failed = false;
+
+                for (usize i = 0; i < count; ++i) {
+                    moves.clear();
+                    movegen::generateAll(moves, pos);
+
+                    const auto move = selectRandomLegal(rng, pos, keyHistory, moves);
+
+                    if (!move) {
+                        failed = true;
+                        break;
+                    }
+
+                    randomMoves.push(move);
+                    newKeys.push(pos.key());
+
+                    pos = pos.applyMove(move);
+                }
+
+                if (!failed) {
+                    break;
+                }
+            }
+
+            std::ranges::copy(newKeys, std::back_inserter(keyHistory));
+
+            for (const auto move : randomMoves) {
+                format.pushUnscored(move);
+            }
+
+            return pos;
+        }
+
+        void runThread(u32 id, u64 seed, const std::filesystem::path& outDir) {
+            const auto filename = std::to_string(id) + ".spk";
+            const auto outFile = outDir / filename;
+
+            std::ofstream stream{outFile, std::ios::binary};
+
+            if (!stream) {
+                std::cerr << "failed to open output file \"" << outFile << "\"" << std::endl;
+                return;
+            }
+
+            util::rng::Jsf64Rng rng{seed};
+
+            Searcher searcher{kDatagenTtSizeMib};
+            searcher.setLimiter(std::make_unique<limit::SoftNodeLimiter>(5000, 8388608));
+
+            std::vector<u64> keyHistory{};
+            keyHistory.reserve(1024);
+
+            auto& thread = searcher.mainThread();
+            thread.maxDepth = kMaxDepth;
+
+            format::Stoatpack format{};
+
+            usize gameCount{};
+            usize totalPositions{};
+
+            const auto start = util::Instant::now();
+
+            const auto printProgress = [&] {
+                const std::scoped_lock lock{s_printMutex};
+
+                const auto time = start.elapsed();
+
+                const auto gamesPerSec = static_cast<f64>(gameCount) / time;
+                const auto posPerSec = static_cast<f64>(totalPositions) / time;
+
+                std::cout << "thread " << id << ": wrote " << totalPositions << " positions from " << gameCount
+                          << " games in " << time << " sec (" << gamesPerSec << " games/sec, " << posPerSec
+                          << " pos/sec)" << std::endl;
+            };
+
+            while (!s_stop.load()) {
+                searcher.newGame();
+
+                format.startStandard();
+                keyHistory.clear();
+
+                auto pos = getStartpos(rng, keyHistory, format);
+
+                std::optional<format::Outcome> outcome{};
+
+                while (!outcome) {
+                    thread.reset(pos, keyHistory);
+                    searcher.runDatagenSearch();
+
+                    const auto blackScore = pos.stm() == Colors::kBlack ? thread.lastScore : -thread.lastScore;
+                    const auto move = thread.lastPv.moves[0];
+
+                    if (move.isNull()) {
+                        outcome =
+                            pos.stm() == Colors::kBlack ? format::Outcome::kBlackLoss : format::Outcome::kBlackWin;
+                        break;
+                    }
+
+                    if (std::abs(blackScore) > kScoreWin) {
+                        outcome = blackScore > 0 ? format::Outcome::kBlackWin : format::Outcome::kBlackLoss;
+                        break;
+                    }
+
+                    const auto oldPos = pos;
+
+                    keyHistory.push_back(pos.key());
+                    pos = pos.applyMove(move);
+
+                    const auto sennichite = pos.testSennichite(false, keyHistory, 999999999);
+
+                    if (sennichite == SennichiteStatus::kDraw) {
+                        outcome = format::Outcome::kDraw;
+                        break;
+                    } else if (sennichite == SennichiteStatus::kWin) {
+                        const std::scoped_lock lock{s_printMutex};
+
+                        std::cerr << "Illegal perpetual as best move?" << std::endl;
+
+                        std::cerr << "Keys:";
+                        for (usize i = 0; i < keyHistory.size() - 1; ++i) {
+                            std::ostringstream str{};
+                            str << std::hex << std::setw(16) << std::setfill('0');
+                            str << keyHistory[i];
+                            std::cout << ' ' << str.view();
+                        }
+
+                        std::cout << "\nPos: " << oldPos.sfen();
+                        std::cout << "\nMove: " << move;
+                        std::cout << std::endl;
+
+                        s_error.test_and_set();
+                        s_stop = true;
+                    }
+
+                    format.push(move, blackScore);
+                }
+
+                assert(outcome);
+                totalPositions += format.writeAllWithOutcome(stream, *outcome);
+
+                ++gameCount;
+
+                if ((gameCount % kReportInterval) == 0) {
+                    printProgress();
+                }
+            }
+
+            if ((gameCount % kReportInterval) != 0) {
+                printProgress();
+            }
+        }
     } // namespace
 
-    i32 run(std::string_view output, u32 threads) {
+    i32 run(std::string_view output, u32 threadCount) {
         initCtrlCHandler();
 
-        std::ofstream stream{std::string{output}, std::ios::binary};
+        const auto outDir = std::filesystem::path{output};
 
-        if (!stream) {
-            std::cerr << "failed to open output file \"" << output << "\"" << std::endl;
+        if (!std::filesystem::exists(outDir)) {
+            std::filesystem::create_directories(outDir);
+        }
+
+        if (!std::filesystem::is_directory(outDir)) {
+            std::cerr << "out path must be a directory" << std::endl;
             return 1;
         }
 
-        Searcher searcher{kDatagenTtSizeMib};
-        searcher.setLimiter(std::make_unique<limit::SoftNodeLimiter>(5000, 8388608));
+        const auto baseSeed = util::rng::generateSingleSeed();
+        std::cout << "Base seed: " << baseSeed << std::endl;
 
-        searcher.newGame();
+        util::rng::SeedGenerator seedGenerator{baseSeed};
 
-        auto& thread = searcher.mainThread();
-        thread.maxDepth = kMaxDepth;
+        std::vector<std::thread> threads{};
+        threads.reserve(threadCount);
 
-        format::Stoatpack format{};
-
-        auto pos = Position::startpos();
-
-        std::vector<u64> keyHistory{};
-        keyHistory.reserve(1024);
-
-        format.startStandard();
-
-        std::optional<format::Outcome> outcome{};
-
-        while (!outcome) {
-            thread.reset(pos, keyHistory);
-            searcher.runDatagenSearch();
-
-            const auto blackScore = pos.stm() == Colors::kBlack ? thread.lastScore : -thread.lastScore;
-            const auto move = thread.lastPv.moves[0];
-
-            if (move.isNull()) {
-                outcome = pos.stm() == Colors::kBlack ? format::Outcome::kBlackLoss : format::Outcome::kBlackWin;
-                break;
-            }
-
-            if (std::abs(blackScore) > kScoreWin) {
-                outcome = blackScore > 0 ? format::Outcome::kBlackWin : format::Outcome::kBlackLoss;
-                break;
-            }
-
-            keyHistory.push_back(pos.key());
-            pos = pos.applyMove(move);
-
-            const auto sennichite = pos.testSennichite(false, keyHistory, 999999999);
-
-            if (sennichite == SennichiteStatus::kDraw) {
-                outcome = format::Outcome::kDraw;
-                break;
-            } else if (sennichite == SennichiteStatus::kWin) {
-                std::cerr << "Illegal perpetual as best move?" << std::endl;
-                return 1;
-            }
-
-            format.push(move, blackScore);
+        for (u32 id = 0; id < threadCount; ++id) {
+            const auto seed = seedGenerator.nextSeed();
+            threads.emplace_back([&, id, seed] { runThread(id, seed, outDir); });
         }
 
-        assert(outcome);
-        format.writeAllWithOutcome(stream, *outcome);
+        for (auto& thread : threads) {
+            thread.join();
+        }
+
+        if (s_error.test_and_set()) {
+            return 1;
+        }
+
+        std::cout << "done" << std::endl;
 
         return 0;
     }

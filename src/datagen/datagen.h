@@ -23,5 +23,5 @@
 #include <string_view>
 
 namespace stoat::datagen {
-    i32 run(std::string_view output, u32 threads);
+    i32 run(std::string_view output, u32 threadCount);
 }

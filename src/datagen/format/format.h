@@ -43,6 +43,6 @@ namespace stoat::datagen::format {
         virtual void pushUnscored(Move move) = 0;
         virtual void push(Move move, Score score) = 0;
 
-        virtual void writeAllWithOutcome(std::ostream& stream, Outcome outcome) = 0;
+        virtual usize writeAllWithOutcome(std::ostream& stream, Outcome outcome) = 0;
     };
 } // namespace stoat::datagen::format

@@ -41,7 +41,7 @@ namespace stoat::datagen::format {
         m_moves.emplace_back(move.raw(), static_cast<i16>(score));
     }
 
-    void Stoatpack::writeAllWithOutcome(std::ostream& stream, Outcome outcome) {
+    usize Stoatpack::writeAllWithOutcome(std::ostream& stream, Outcome outcome) {
         static constexpr ScoredMove kNullTerminator = {0, 0};
 
         static constexpr u8 kStandardType = 0;
@@ -55,5 +55,7 @@ namespace stoat::datagen::format {
 
         stream.write(reinterpret_cast<const char*>(m_moves.data()), m_moves.size() * sizeof(ScoredMove));
         stream.write(reinterpret_cast<const char*>(&kNullTerminator), sizeof(kNullTerminator));
+
+        return m_moves.size();
     }
 } // namespace stoat::datagen::format

@@ -26,7 +26,7 @@
 #include "format.h"
 
 namespace stoat::datagen::format {
-    class Stoatpack final : IDataFormat {
+    class Stoatpack final : public IDataFormat {
     public:
         Stoatpack();
         ~Stoatpack() final = default;
@@ -36,7 +36,7 @@ namespace stoat::datagen::format {
         void pushUnscored(Move move) final;
         void push(Move move, Score score) final;
 
-        void writeAllWithOutcome(std::ostream& stream, Outcome outcome) final;
+        usize writeAllWithOutcome(std::ostream& stream, Outcome outcome) final;
 
     private:
         using ScoredMove = std::pair<u16, i16>;
