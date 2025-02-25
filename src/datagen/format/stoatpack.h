@@ -18,31 +18,31 @@
 
 #pragma once
 
-#include "../types.h"
+#include "../../types.h"
 
-#include <iostream>
+#include <utility>
+#include <vector>
 
-#include "../core.h"
-#include "../move.h"
-#include "../position.h"
+#include "format.h"
 
 namespace stoat::datagen::format {
-    enum class Outcome : u8 {
-        kSenteLoss = 0,
-        kDraw,
-        kSenteWin,
-    };
-
-    class IDataFormat {
+    class Stoatpack final : IDataFormat {
     public:
-        virtual ~IDataFormat() = default;
+        Stoatpack();
+        ~Stoatpack() final = default;
 
-        virtual void startStandard() = 0;
-        //TODO shogi960, arbitrary position
+        void startStandard() final;
 
-        virtual void pushUnscored(Move move) = 0;
-        virtual void push(Move move, Score score) = 0;
+        void pushUnscored(Move move) final;
+        void push(Move move, Score score) final;
 
-        virtual void writeAllWithOutcome(std::ostream& stream, Outcome outcome) = 0;
+        void writeAllWithOutcome(std::ostream& stream, Outcome outcome) final;
+
+    private:
+        using ScoredMove = std::pair<u16, i16>;
+        static_assert(sizeof(ScoredMove) == sizeof(u16) + sizeof(i16));
+
+        std::vector<u16> m_unscoredMoves{};
+        std::vector<ScoredMove> m_moves{};
     };
 } // namespace stoat::datagen::format

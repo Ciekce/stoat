@@ -68,6 +68,19 @@ namespace stoat::limit {
         usize m_maxNodes;
     };
 
+    class SoftNodeLimiter final : public ISearchLimiter {
+    public:
+        explicit SoftNodeLimiter(usize optNodes, usize maxNodes);
+        ~SoftNodeLimiter() final = default;
+
+        [[nodiscard]] bool stopSoft(usize nodes) final;
+        [[nodiscard]] bool stopHard(usize nodes) final;
+
+    private:
+        usize m_optNodes;
+        usize m_maxNodes;
+    };
+
     class MoveTimeLimiter final : public ISearchLimiter {
     public:
         MoveTimeLimiter(util::Instant startTime, f64 maxTime);

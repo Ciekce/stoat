@@ -125,6 +125,10 @@ namespace stoat {
         m_cuteChessWorkaround = enabled;
     }
 
+    void Searcher::setLimiter(std::unique_ptr<limit::ISearchLimiter> limiter) {
+        m_limiter = std::move(limiter);
+    }
+
     void Searcher::startSearch(
         const Position& pos,
         std::span<const u64> keyHistory,
@@ -190,11 +194,17 @@ namespace stoat {
         }
     }
 
+    ThreadData& Searcher::mainThread() {
+        return m_threads[0];
+    }
+
     void Searcher::runBenchSearch(BenchInfo& info, const Position& pos, i32 depth) {
         if (initRootMoves(m_rootMoves, pos) == RootStatus::kNoLegalMoves) {
             protocol::currHandler().printInfoString(std::cout, "no legal moves");
             return;
         }
+
+        auto currLimiter = std::move(m_limiter);
 
         m_limiter = std::make_unique<limit::CompoundLimiter>();
         m_infinite = false;
@@ -214,7 +224,39 @@ namespace stoat {
         info.time = m_startTime.elapsed();
         info.nodes = thread.loadNodes();
 
-        m_limiter = nullptr;
+        m_limiter = std::move(currLimiter);
+    }
+
+    void Searcher::runDatagenSearch() {
+        if (!m_limiter) {
+            std::cerr << "Missing limiter" << std::endl;
+            return;
+        }
+
+        if (m_threads.size() > 1) {
+            std::cerr << "Too many datagen threads" << std::endl;
+            return;
+        }
+
+        ++m_runningThreads;
+
+        auto& thread = mainThread();
+        thread.lastPv.reset();
+
+        if (initRootMoves(m_rootMoves, thread.rootPos) == RootStatus::kNoLegalMoves) {
+            return;
+        }
+
+        const bool wasInfinite = m_infinite;
+
+        m_silent = true;
+        m_infinite = false;
+
+        m_stop.store(false);
+        runSearch(thread);
+
+        m_silent = false;
+        m_infinite = wasInfinite;
     }
 
     bool Searcher::isSearching() const {
@@ -303,7 +345,6 @@ namespace stoat {
 
             finalReport(m_startTime.elapsed());
 
-            m_limiter = nullptr;
             m_searching = false;
         } else {
             waitForThreads();
@@ -594,6 +635,10 @@ namespace stoat {
     }
 
     void Searcher::report(const ThreadData& bestThread, f64 time) {
+        if (m_silent) {
+            return;
+        }
+
         usize totalNodes = 0;
         i32 maxSeldepth = 0;
 
@@ -635,6 +680,10 @@ namespace stoat {
     }
 
     void Searcher::finalReport(f64 time) {
+        if (m_silent) {
+            return;
+        }
+
         const auto& bestThread = m_threads[0];
 
         report(bestThread, time);

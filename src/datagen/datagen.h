@@ -20,29 +20,8 @@
 
 #include "../types.h"
 
-#include <utility>
-#include <vector>
+#include <string_view>
 
-#include "format.h"
-
-namespace stoat::datagen::format {
-    class Stoatpack final : IDataFormat {
-    public:
-        Stoatpack();
-        ~Stoatpack() final = default;
-
-        void startStandard() final;
-
-        void pushUnscored(Move move) final;
-        void push(Move move, Score score) final;
-
-        void writeAllWithOutcome(std::ostream& stream, Outcome outcome) final;
-
-    private:
-        using ScoredMove = std::pair<u16, i16>;
-        static_assert(sizeof(ScoredMove) == sizeof(u16) + sizeof(i16));
-
-        std::vector<u16> m_unscoredMoves{};
-        std::vector<ScoredMove> m_moves{};
-    };
-} // namespace stoat::datagen::format
+namespace stoat::datagen {
+    i32 run(std::string_view output, u32 threads);
+}

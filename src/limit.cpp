@@ -37,6 +37,21 @@ namespace stoat::limit {
         return nodes >= m_maxNodes;
     }
 
+    SoftNodeLimiter::SoftNodeLimiter(usize optNodes, usize maxNodes) :
+            m_optNodes{optNodes}, m_maxNodes{maxNodes} {
+        if (m_optNodes > m_maxNodes) {
+            m_optNodes = m_maxNodes;
+        }
+    }
+
+    bool SoftNodeLimiter::stopSoft(usize nodes) {
+        return nodes >= m_optNodes;
+    }
+
+    bool SoftNodeLimiter::stopHard(usize nodes) {
+        return nodes >= m_maxNodes;
+    }
+
     MoveTimeLimiter::MoveTimeLimiter(util::Instant startTime, f64 maxTime) :
             m_startTime{startTime}, m_maxTime{maxTime} {}
 

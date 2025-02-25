@@ -55,6 +55,14 @@ namespace stoat {
         void setTtSize(usize mib);
         void setCuteChessWorkaround(bool enabled);
 
+        void setLimiter(std::unique_ptr<limit::ISearchLimiter> limiter);
+
+        // THIS POINTER WILL BE DANGLING IF setLimiter
+        // IS CALLED OR THE SEARCHER IS DESTROYED
+        [[nodiscard]] inline limit::ISearchLimiter* limiter() {
+            return m_limiter.get();
+        }
+
         void startSearch(
             const Position& pos,
             std::span<const u64> keyHistory,
@@ -65,13 +73,19 @@ namespace stoat {
         );
         void stop();
 
+        // THIS REFERENCE WILL BE DANGLING IF setThreads
+        // IS CALLED OR THE SEARCHER IS DESTROYED
+        [[nodiscard]] ThreadData& mainThread();
+
         void runBenchSearch(BenchInfo& info, const Position& pos, i32 depth);
+        void runDatagenSearch();
 
         [[nodiscard]] bool isSearching() const;
 
     private:
         std::vector<ThreadData> m_threads{};
 
+        bool m_silent{};
         bool m_cuteChessWorkaround{};
 
         mutable std::mutex m_searchMutex{};
