@@ -139,7 +139,7 @@ namespace stoat::datagen {
             const auto filename = std::to_string(id) + ".spk";
             const auto outFile = outDir / filename;
 
-            std::ofstream stream{outFile, std::ios::binary};
+            std::ofstream stream{outFile, std::ios::binary | std::ios::app};
 
             if (!stream) {
                 std::cerr << "failed to open output file \"" << outFile << "\"" << std::endl;
