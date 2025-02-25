@@ -69,8 +69,6 @@ namespace stoat::datagen {
 
         std::optional<format::Outcome> outcome{};
 
-        std::cout << "Moves:";
-
         while (!outcome) {
             thread.reset(pos, keyHistory);
             searcher.runDatagenSearch();
@@ -87,8 +85,6 @@ namespace stoat::datagen {
                 outcome = blackScore > 0 ? format::Outcome::kBlackWin : format::Outcome::kBlackLoss;
                 break;
             }
-
-            std::cout << ' ' << move;
 
             keyHistory.push_back(pos.key());
             pos = pos.applyMove(move);
@@ -107,23 +103,6 @@ namespace stoat::datagen {
         }
 
         assert(outcome);
-
-        std::cout << "\nOutcome: ";
-
-        switch (*outcome) {
-            case format::Outcome::kBlackLoss:
-                std::cout << "Sente loss";
-                break;
-            case format::Outcome::kDraw:
-                std::cout << "Draw";
-                break;
-            case format::Outcome::kBlackWin:
-                std::cout << "Sente win";
-                break;
-        }
-
-        std::cout << std::endl;
-
         format.writeAllWithOutcome(stream, *outcome);
 
         return 0;
