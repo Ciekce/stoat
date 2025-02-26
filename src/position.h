@@ -169,6 +169,8 @@ namespace stoat {
             i32 limit = 16
         ) const;
 
+        [[nodiscard]] bool isEnteringKingsWin() const;
+
         [[nodiscard]] bool isPseudolegal(Move move) const;
         [[nodiscard]] bool isLegal(Move move) const;
 

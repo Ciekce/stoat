@@ -146,6 +146,10 @@ namespace stoat {
             return;
         }
 
+        if (pos.isEnteringKingsWin() && protocol::currHandler().handleEnteringKingsWin()) {
+            return;
+        }
+
         m_resetBarrier.arriveAndWait();
 
         const std::unique_lock lock{m_searchMutex};
@@ -447,6 +451,8 @@ namespace stoat {
                 continue;
             } else if (sennichite == SennichiteStatus::kDraw) {
                 score = drawScore(thread.loadNodes());
+            } else if (pos.isEnteringKingsWin()) {
+                score = kScoreMate - ply - 1;
             } else {
                 const auto newDepth = depth - 1;
 

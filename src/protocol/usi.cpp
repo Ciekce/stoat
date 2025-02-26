@@ -41,6 +41,11 @@ namespace stoat::protocol {
         std::cout << "bestmove resign" << std::endl;
     }
 
+    bool UsiHandler::handleEnteringKingsWin() const {
+        std::cout << "bestmove win" << std::endl;
+        return true;
+    }
+
     void UsiHandler::printOptionName(std::ostream& stream, std::string_view name) const {
         static constexpr std::array kFixedSemanticsOptions = {
             "Hash",
