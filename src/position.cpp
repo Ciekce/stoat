@@ -302,6 +302,36 @@ namespace stoat {
         return SennichiteStatus::kNone;
     }
 
+    bool Position::isEnteringKingsWin() const {
+        if (isInCheck()) {
+            return false;
+        }
+
+        const auto stm = this->stm();
+        const auto promoZone = Bitboards::promoArea(stm);
+
+        const auto king = pieceBb(PieceTypes::kKing, stm);
+
+        if ((promoZone & king).empty()) {
+            return false;
+        }
+
+        if ((promoZone & colorBb(stm)).popcount() < 11) { // 10 pieces other than the king, plus the king
+            return false;
+        }
+
+        const auto bishopsRooks = pieceBb(PieceTypes::kBishop, stm) | pieceBb(PieceTypes::kRook, stm)
+                                | pieceBb(PieceTypes::kPromotedBishop, stm) | pieceBb(PieceTypes::kPromotedRook, stm);
+
+        i32 score = 0;
+
+        score += 5 * (promoZone & bishopsRooks).popcount();
+        score += (promoZone & colorBb(stm) ^ king ^ bishopsRooks).popcount();
+        score += stm == Colors::kWhite;
+
+        return score >= 28;
+    }
+
     bool Position::isPseudolegal(Move move) const {
         assert(!move.isNull());
 

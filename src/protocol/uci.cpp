@@ -76,6 +76,11 @@ namespace stoat::protocol {
         printBestMove(std::cout, kNullMove);
     }
 
+    bool UciHandler::handleEnteringKingsWin() const {
+        printInfoString(std::cout, "Entering kings win at root");
+        return false;
+    }
+
     void UciHandler::printOptionName(std::ostream& stream, std::string_view name) const {
         stream << name;
     }
