@@ -54,6 +54,7 @@ namespace stoat::datagen {
             util::signal::addCtrlCHandler([] { s_stop.store(true); });
         }
 
+        // NOTE: this does not test for entering kings
         [[nodiscard]] Move selectRandomLegal(
             util::rng::Jsf64Rng& rng,
             const Position& pos,
@@ -228,12 +229,20 @@ namespace stoat::datagen {
                             std::cout << ' ' << str.view();
                         }
 
-                        std::cout << "\nPos: " << oldPos.sfen();
-                        std::cout << "\nMove: " << move;
-                        std::cout << std::endl;
+                        std::cerr << "\nPos: " << oldPos.sfen();
+                        std::cerr << "\nMove: " << move;
+                        std::cerr << std::endl;
 
                         s_error.test_and_set();
                         s_stop = true;
+                    }
+
+                    // This will likely be handled by search returning
+                    // a mate score, but test for it just in case
+                    if (pos.isEnteringKingsWin()) {
+                        outcome =
+                            pos.stm() == Colors::kBlack ? format::Outcome::kBlackWin : format::Outcome::kBlackLoss;
+                        break;
                     }
 
                     format.push(move, blackScore);
