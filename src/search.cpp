@@ -242,8 +242,6 @@ namespace stoat {
             return;
         }
 
-        ++m_runningThreads;
-
         auto& thread = mainThread();
         thread.lastPv.reset();
 
@@ -257,6 +255,8 @@ namespace stoat {
         m_infinite = false;
 
         m_stop.store(false);
+        ++m_runningThreads;
+
         runSearch(thread);
 
         m_silent = false;

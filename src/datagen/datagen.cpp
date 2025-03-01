@@ -283,6 +283,8 @@ namespace stoat::datagen {
 
         util::rng::SeedGenerator seedGenerator{baseSeed};
 
+        std::cout << "Starting " << threadCount << " threads" << std::endl;
+
         std::vector<std::thread> threads{};
         threads.reserve(threadCount);
 
