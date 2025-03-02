@@ -142,7 +142,7 @@ namespace stoat::eval::nnue {
         activateHand(Colors::kBlack);
         activateHand(Colors::kWhite);
 
-        const auto crelu = [](i16 v) { return std::clamp(static_cast<i32>(v), 0, kL1Q); };
+        const auto crelu = [](i16 v) { return std::clamp(static_cast<i32>(v), 0, kFtQ); };
 
         const std::span stmAccum = pos.stm() == Colors::kBlack ? blackAccum : whiteAccum;
         const std::span nstmAccum = pos.stm() == Colors::kBlack ? whiteAccum : blackAccum;
