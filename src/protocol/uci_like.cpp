@@ -24,6 +24,7 @@
 #include <sstream>
 
 #include "../eval/eval.h"
+#include "../eval/nnue.h"
 #include "../limit.h"
 #include "../perft.h"
 #include "../ttable.h"
@@ -65,6 +66,7 @@ namespace stoat::protocol {
 
         REGISTER_HANDLER(d);
         REGISTER_HANDLER(splitperft);
+        REGISTER_HANDLER(raweval);
 
 #undef REGISTER_HANDLER
     }
@@ -533,5 +535,12 @@ namespace stoat::protocol {
         if (const auto depth = util::tryParse<i32>(args[0])) {
             splitPerft(m_state.pos, *depth);
         }
+    }
+
+    void UciLikeHandler::handle_raweval(
+        [[maybe_unused]] std::span<std::string_view> args,
+        [[maybe_unused]] util::Instant startTime
+    ) {
+        std::cout << eval::nnue::evaluate(m_state.pos) << std::endl;
     }
 } // namespace stoat::protocol

@@ -95,5 +95,6 @@ namespace stoat::protocol {
         // nonstandard
         void handle_d(std::span<std::string_view> args, util::Instant startTime);
         void handle_splitperft(std::span<std::string_view> args, util::Instant startTime);
+        void handle_raweval(std::span<std::string_view> args, util::Instant startTime);
     };
 } // namespace stoat::protocol

@@ -16,15 +16,13 @@
  * along with Stoat. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "eval.h"
+#pragma once
 
-#include <algorithm>
+#include "../types.h"
 
-#include "nnue.h"
+#include "../position.h"
 
-namespace stoat::eval {
-    Score staticEval(const Position& pos) {
-        const auto nnue = nnue::evaluate(pos);
-        return std::clamp(nnue, -kScoreWin + 1, kScoreWin - 1);
-    }
-} // namespace stoat::eval
+namespace stoat::eval::nnue {
+    // "ue"
+    [[nodiscard]] i32 evaluate(const Position& pos);
+} // namespace stoat::eval::nnue

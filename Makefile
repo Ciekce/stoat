@@ -5,13 +5,17 @@ ifndef EXE
     NO_EXE_SET = true
 endif
 
-SOURCES := src/main.cpp src/position.cpp src/util/split.cpp src/move.cpp src/movegen.cpp src/perft.cpp src/util/timer.cpp src/attacks/sliders/bmi2.cpp src/protocol/handler.cpp src/protocol/uci_like.cpp src/protocol/usi.cpp src/protocol/uci.cpp src/search.cpp src/eval/eval.cpp src/limit.cpp src/bench.cpp src/thread.cpp src/attacks/sliders/black_magic.cpp src/ttable.cpp src/movepick.cpp src/see.cpp src/datagen/stoatpack.cpp
+ifndef EVALFILE
+    $(error no evalfile specified)
+endif
+
+SOURCES := src/main.cpp src/position.cpp src/util/split.cpp src/move.cpp src/movegen.cpp src/perft.cpp src/util/timer.cpp src/attacks/sliders/bmi2.cpp src/protocol/handler.cpp src/protocol/uci_like.cpp src/protocol/usi.cpp src/protocol/uci.cpp src/search.cpp src/eval/eval.cpp src/limit.cpp src/bench.cpp src/thread.cpp src/attacks/sliders/black_magic.cpp src/ttable.cpp src/movepick.cpp src/see.cpp src/datagen/format/stoatpack.cpp src/datagen/format/stoatformat.cpp src/datagen/datagen.cpp src/util/ctrlc.cpp src/eval/nnue.cpp
 
 SUFFIX :=
 
 CXX := clang++
 
-CXXFLAGS := -std=c++20 -flto -fconstexpr-steps=4194304 -DST_VERSION=$(VERSION)
+CXXFLAGS := -std=c++20 -flto -fconstexpr-steps=4194304 -DST_NETWORK_FILE=\"$(EVALFILE)\" -DST_VERSION=$(VERSION)
 
 CXXFLAGS_RELEASE := -O3 -DNDEBUG
 CXXFLAGS_SANITIZER := -O1 -g -fsanitize=address -fsanitize=undefined
