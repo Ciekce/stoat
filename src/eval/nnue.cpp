@@ -58,7 +58,7 @@ namespace stoat::eval::nnue {
             return kColorStride * (piece.color() != perspective) + kPieceStride * piece.type().idx() + sq.idx();
         }
 
-        [[nodiscard]] u32 handFeatureIndex(Color perspective, Piece piece, u32 count) {
+        [[nodiscard]] u32 handFeatureIndex(Color perspective, Piece piece, u32 countMinusOne) {
             static constexpr auto kPieceOffsets = [] {
                 std::array<u32, PieceTypes::kCount> offsets{};
                 offsets.fill(std::numeric_limits<u32>::max());
@@ -74,10 +74,8 @@ namespace stoat::eval::nnue {
                 return offsets;
             }();
 
-            assert(count > 0);
-
             return kColorStride * (piece.color() != perspective) + kHandOffset + kPieceOffsets[piece.type().idx()]
-                 + count - 1;
+                 + countMinusOne;
         }
 
         struct Network {
@@ -130,11 +128,13 @@ namespace stoat::eval::nnue {
                 if (count > 0) {
                     const auto piece = pt.withColor(c);
 
-                    const auto blackFeature = handFeatureIndex(Colors::kBlack, piece, count);
-                    const auto whiteFeature = handFeatureIndex(Colors::kWhite, piece, count);
+                    for (u32 featureCount = 0; featureCount < count; ++featureCount) {
+                        const auto blackFeature = handFeatureIndex(Colors::kBlack, piece, featureCount);
+                        const auto whiteFeature = handFeatureIndex(Colors::kWhite, piece, featureCount);
 
-                    activate(blackAccum, blackFeature);
-                    activate(whiteAccum, whiteFeature);
+                        activate(blackAccum, blackFeature);
+                        activate(whiteAccum, whiteFeature);
+                    }
                 }
             }
         };
