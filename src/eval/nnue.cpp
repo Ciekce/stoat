@@ -79,24 +79,24 @@ namespace stoat::eval::nnue {
         }
 
         struct Network {
-            util::MultiArray<i16, kFtSize, kL1Size> ftWeights;
-            std::array<i16, kL1Size> ftBiases;
-            util::MultiArray<i16, 2, kL1Size> l1Weights;
-            i16 l1Bias;
+            util::MultiArray<f32, kFtSize, kL1Size> ftWeights;
+            std::array<f32, kL1Size> ftBiases;
+            util::MultiArray<f32, 2, kL1Size> l1Weights;
+            f32 l1Bias;
         };
 
         const Network& s_network = *reinterpret_cast<const Network*>(g_defaultNetData);
     } // namespace
 
     i32 evaluate(const Position& pos) {
-        const auto activate = [](std::span<i16, kL1Size> accum, u32 feature) {
+        const auto activate = [](std::span<f32, kL1Size> accum, u32 feature) {
             for (u32 i = 0; i < kL1Size; ++i) {
                 accum[i] += s_network.ftWeights[feature][i];
             }
         };
 
-        std::array<i16, kL1Size> blackAccum{};
-        std::array<i16, kL1Size> whiteAccum{};
+        std::array<f32, kL1Size> blackAccum{};
+        std::array<f32, kL1Size> whiteAccum{};
 
         std::ranges::copy(s_network.ftBiases, blackAccum.begin());
         std::ranges::copy(s_network.ftBiases, whiteAccum.begin());
@@ -142,12 +142,12 @@ namespace stoat::eval::nnue {
         activateHand(Colors::kBlack);
         activateHand(Colors::kWhite);
 
-        const auto crelu = [](i16 v) { return std::clamp(static_cast<i32>(v), 0, kL1Q); };
+        const auto crelu = [](f32 v) { return std::clamp(v, 0.0f, 1.0f); };
 
         const std::span stmAccum = pos.stm() == Colors::kBlack ? blackAccum : whiteAccum;
         const std::span nstmAccum = pos.stm() == Colors::kBlack ? whiteAccum : blackAccum;
 
-        i32 out = 0;
+        f32 out = 0;
 
         for (u32 i = 0; i < kL1Size; ++i) {
             out += crelu(stmAccum[i]) * s_network.l1Weights[0][i];
@@ -156,6 +156,6 @@ namespace stoat::eval::nnue {
 
         out += s_network.l1Bias;
 
-        return out * kScale / (kFtQ * kL1Q);
+        return static_cast<i32>(out * kScale);
     }
 } // namespace stoat::eval::nnue
