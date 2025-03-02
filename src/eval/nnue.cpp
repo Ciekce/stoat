@@ -142,7 +142,10 @@ namespace stoat::eval::nnue {
         activateHand(Colors::kBlack);
         activateHand(Colors::kWhite);
 
-        const auto crelu = [](i16 v) { return std::clamp(static_cast<i32>(v), 0, kFtQ); };
+        const auto screlu = [](i16 v) {
+            const auto clipped = std::clamp(static_cast<i32>(v), 0, kFtQ);
+            return clipped * clipped;
+        };
 
         const std::span stmAccum = pos.stm() == Colors::kBlack ? blackAccum : whiteAccum;
         const std::span nstmAccum = pos.stm() == Colors::kBlack ? whiteAccum : blackAccum;
@@ -150,10 +153,11 @@ namespace stoat::eval::nnue {
         i32 out = 0;
 
         for (u32 i = 0; i < kL1Size; ++i) {
-            out += crelu(stmAccum[i]) * s_network.l1Weights[0][i];
-            out += crelu(nstmAccum[i]) * s_network.l1Weights[1][i];
+            out += screlu(stmAccum[i]) * s_network.l1Weights[0][i];
+            out += screlu(nstmAccum[i]) * s_network.l1Weights[1][i];
         }
 
+        out /= kFtQ;
         out += s_network.l1Bias;
 
         return out * kScale / (kFtQ * kL1Q);
