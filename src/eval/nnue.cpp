@@ -100,6 +100,9 @@ namespace stoat::eval::nnue {
         std::array<i16, kL1Size> blackAccum{};
         std::array<i16, kL1Size> whiteAccum{};
 
+        std::ranges::copy(s_network.ftBiases, blackAccum.begin());
+        std::ranges::copy(s_network.ftBiases, whiteAccum.begin());
+
         auto occ = pos.occupancy();
         while (!occ.empty()) {
             const auto sq = occ.popLsb();
