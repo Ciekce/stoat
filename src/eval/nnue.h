@@ -20,6 +20,7 @@
 
 #include "../types.h"
 
+#include <limits>
 #include <utility>
 #include <vector>
 

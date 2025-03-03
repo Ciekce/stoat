@@ -19,7 +19,6 @@
 #include "nnue.h"
 
 #include <algorithm>
-#include <limits>
 
 #ifdef _MSC_VER
     #define ST_MSVC
