@@ -190,6 +190,7 @@ namespace stoat::datagen {
                 keyHistory.clear();
 
                 auto pos = getStartpos(rng, keyHistory, format);
+                thread.nnueState.reset(pos);
 
                 std::optional<format::Outcome> outcome{};
 
@@ -214,7 +215,7 @@ namespace stoat::datagen {
                     const auto oldPos = pos;
 
                     keyHistory.push_back(pos.key());
-                    pos = pos.applyMove(move);
+                    pos = pos.applyMove<NnueUpdateAction::kApplyInPlace>(move, &thread.nnueState);
 
                     const auto sennichite = pos.testSennichite(false, keyHistory, 999999999);
 

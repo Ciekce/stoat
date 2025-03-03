@@ -178,6 +178,8 @@ namespace stoat {
         for (auto& thread : m_threads) {
             thread.reset(pos, keyHistory);
             thread.maxDepth = maxDepth;
+
+            thread.nnueState.reset(pos);
         }
 
         m_startTime = startTime;
@@ -217,6 +219,7 @@ namespace stoat {
 
         thread.reset(pos, {});
         thread.maxDepth = depth;
+        thread.nnueState.reset(pos);
 
         m_runningThreads.store(1);
         m_stop.store(false);

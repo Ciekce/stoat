@@ -36,8 +36,6 @@ namespace stoat {
 
         stats.seldepth.store(0);
         stats.nodes.store(0);
-
-        nnueState.reset(newRootPos);
     }
 
     std::pair<Position, ThreadPosGuard<true>> ThreadData::applyMove(i32 ply, const Position& pos, Move move) {
