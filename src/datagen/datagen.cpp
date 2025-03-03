@@ -45,6 +45,9 @@ namespace stoat::datagen {
         constexpr usize kBaseRandomMoves = 7;
         constexpr bool kRandomizeStartSide = true;
 
+        constexpr usize kSoftNodes = 5000;
+        constexpr usize kHardNodes = 8388608;
+
         std::mutex s_printMutex{};
 
         std::atomic_bool s_stop{false};
@@ -150,7 +153,7 @@ namespace stoat::datagen {
             util::rng::Jsf64Rng rng{seed};
 
             Searcher searcher{kDatagenTtSizeMib};
-            searcher.setLimiter(std::make_unique<limit::SoftNodeLimiter>(5000, 8388608));
+            searcher.setLimiter(std::make_unique<limit::SoftNodeLimiter>(kSoftNodes, kHardNodes));
 
             std::vector<u64> keyHistory{};
             keyHistory.reserve(1024);
