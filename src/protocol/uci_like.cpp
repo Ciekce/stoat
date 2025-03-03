@@ -521,7 +521,7 @@ namespace stoat::protocol {
 
         std::cout << "\nStatic eval: ";
 
-        const auto staticEval = eval::staticEval(m_state.pos);
+        const auto staticEval = eval::staticEvalOnce(m_state.pos);
         std::cout << PrintScore{staticEval};
 
         std::cout << std::endl;
@@ -541,6 +541,6 @@ namespace stoat::protocol {
         [[maybe_unused]] std::span<std::string_view> args,
         [[maybe_unused]] util::Instant startTime
     ) {
-        std::cout << eval::nnue::evaluate(m_state.pos) << std::endl;
+        std::cout << eval::nnue::evaluateOnce(m_state.pos) << std::endl;
     }
 } // namespace stoat::protocol

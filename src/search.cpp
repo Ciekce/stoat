@@ -399,7 +399,7 @@ namespace stoat {
         }
 
         if (ply >= kMaxDepth) {
-            return pos.isInCheck() ? 0 : eval::staticEval(pos);
+            return pos.isInCheck() ? 0 : eval::staticEval(pos, thread.nnueState);
         }
 
         auto& curr = thread.stack[ply];
@@ -420,7 +420,7 @@ namespace stoat {
             --depth;
         }
 
-        const auto staticEval = eval::staticEval(pos);
+        const auto staticEval = eval::staticEval(pos, thread.nnueState);
 
         if (!kPvNode && !pos.isInCheck()) {
             if (depth <= 4 && staticEval - 120 * depth >= beta) {
@@ -575,10 +575,10 @@ namespace stoat {
         }
 
         if (ply >= kMaxDepth) {
-            return pos.isInCheck() ? 0 : eval::staticEval(pos);
+            return pos.isInCheck() ? 0 : eval::staticEval(pos, thread.nnueState);
         }
 
-        const auto staticEval = eval::staticEval(pos);
+        const auto staticEval = eval::staticEval(pos, thread.nnueState);
 
         if (staticEval >= beta) {
             return staticEval;

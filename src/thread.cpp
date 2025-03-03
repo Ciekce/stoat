@@ -18,6 +18,8 @@
 
 #include "thread.h"
 
+#include <iostream>
+
 namespace stoat {
     ThreadData::ThreadData() {
         keyHistory.reserve(1024);
@@ -34,25 +36,27 @@ namespace stoat {
 
         stats.seldepth.store(0);
         stats.nodes.store(0);
+
+        nnueState.reset(newRootPos);
     }
 
-    std::pair<Position, ThreadPosGuard> ThreadData::applyMove(i32 ply, const Position& pos, Move move) {
+    std::pair<Position, ThreadPosGuard<true>> ThreadData::applyMove(i32 ply, const Position& pos, Move move) {
         stack[ply].move = move;
         keyHistory.push_back(pos.key());
-        return std::pair<Position, ThreadPosGuard>{
+        return std::pair<Position, ThreadPosGuard<true>>{
             std::piecewise_construct,
-            std::forward_as_tuple(pos.applyMove(move)),
-            std::forward_as_tuple(keyHistory)
+            std::forward_as_tuple(pos.applyMove<NnueUpdateAction::kPush>(move, &nnueState)),
+            std::forward_as_tuple(keyHistory, nnueState)
         };
     }
 
-    std::pair<Position, ThreadPosGuard> ThreadData::applyNullMove(i32 ply, const Position& pos) {
+    std::pair<Position, ThreadPosGuard<false>> ThreadData::applyNullMove(i32 ply, const Position& pos) {
         stack[ply].move = kNullMove;
         keyHistory.push_back(pos.key());
-        return std::pair<Position, ThreadPosGuard>{
+        return std::pair<Position, ThreadPosGuard<false>>{
             std::piecewise_construct,
             std::forward_as_tuple(pos.applyNullMove()),
-            std::forward_as_tuple(keyHistory)
+            std::forward_as_tuple(keyHistory, nnueState)
         };
     }
 } // namespace stoat

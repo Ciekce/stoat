@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "core.h"
+#include "eval/nnue.h"
 #include "position.h"
 #include "pv.h"
 
@@ -47,20 +48,25 @@ namespace stoat {
         }
     };
 
+    template <bool kUpdateNnue>
     class ThreadPosGuard {
     public:
-        explicit ThreadPosGuard(std::vector<u64>& keyHistory) :
-                m_keyHistory{keyHistory} {}
+        explicit ThreadPosGuard(std::vector<u64>& keyHistory, eval::nnue::NnueState& nnueState) :
+                m_keyHistory{keyHistory}, m_nnueState{nnueState} {}
 
         ThreadPosGuard(const ThreadPosGuard&) = delete;
         ThreadPosGuard(ThreadPosGuard&&) = delete;
 
         inline ~ThreadPosGuard() {
             m_keyHistory.pop_back();
+            if constexpr (kUpdateNnue) {
+                m_nnueState.pop();
+            }
         }
 
     private:
         std::vector<u64>& m_keyHistory;
+        eval::nnue::NnueState& m_nnueState;
     };
 
     struct StackFrame {
@@ -88,6 +94,8 @@ namespace stoat {
 
         Score lastScore{};
         PvList lastPv{};
+
+        eval::nnue::NnueState nnueState{};
 
         std::vector<StackFrame> stack{};
 
@@ -119,7 +127,7 @@ namespace stoat {
 
         void reset(const Position& newRootPos, std::span<const u64> newKeyHistory);
 
-        [[nodiscard]] std::pair<Position, ThreadPosGuard> applyMove(i32 ply, const Position& pos, Move move);
-        [[nodiscard]] std::pair<Position, ThreadPosGuard> applyNullMove(i32 ply, const Position& pos);
+        [[nodiscard]] std::pair<Position, ThreadPosGuard<true>> applyMove(i32 ply, const Position& pos, Move move);
+        [[nodiscard]] std::pair<Position, ThreadPosGuard<false>> applyNullMove(i32 ply, const Position& pos);
     };
 } // namespace stoat
