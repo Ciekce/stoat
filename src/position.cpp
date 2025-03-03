@@ -22,6 +22,7 @@
 #include <sstream>
 
 #include "attacks/attacks.h"
+#include "eval/nnue.h"
 #include "keys.h"
 #include "movegen.h"
 #include "rays.h"
@@ -222,12 +223,20 @@ namespace stoat {
         all ^= keys::pieceInHand(c, pt, before) ^ keys::pieceInHand(c, pt, after);
     }
 
+    template Position Position::applyMove<NnueUpdateAction::kNone>(Move, eval::nnue::NnueState*) const;
+    template Position Position::applyMove<NnueUpdateAction::kPush>(Move, eval::nnue::NnueState*) const;
+    template Position Position::applyMove<NnueUpdateAction::kApplyInPlace>(Move, eval::nnue::NnueState*) const;
+
     Position::Position() {
         m_mailbox.fill(Pieces::kNone);
     }
 
-    Position Position::applyMove(Move move) const {
+    template <NnueUpdateAction kUpdateAction>
+    Position Position::applyMove(Move move, eval::nnue::NnueState* nnueState) const {
+        static constexpr bool kUpdateNnue = kUpdateAction != NnueUpdateAction::kNone;
+
         auto newPos = *this;
+        eval::nnue::NnueUpdates updates{};
 
         const auto stm = this->stm();
 
@@ -235,7 +244,7 @@ namespace stoat {
             const auto sq = move.to();
             const auto piece = move.dropPiece().withColor(stm);
 
-            newPos.dropPiece(sq, piece);
+            newPos.dropPiece<kUpdateNnue>(sq, piece, updates);
         } else {
             const auto to = move.to();
             const auto from = move.from();
@@ -243,10 +252,16 @@ namespace stoat {
             const auto piece = newPos.pieceOn(from);
 
             if (move.isPromo()) {
-                newPos.promotePiece(from, to, piece);
+                newPos.promotePiece<kUpdateNnue>(from, to, piece, updates);
             } else {
-                newPos.movePiece(from, to, piece);
+                newPos.movePiece<kUpdateNnue>(from, to, piece, updates);
             }
+        }
+
+        if constexpr (kUpdateAction == NnueUpdateAction::kPush) {
+            nnueState->push(updates);
+        } else if constexpr (kUpdateAction == NnueUpdateAction::kApplyInPlace) {
+            nnueState->applyInPlace(updates);
         }
 
         ++newPos.m_moveCount;
@@ -741,7 +756,8 @@ namespace stoat {
         m_keys.flipPiece(piece, sq);
     }
 
-    void Position::movePiece(Square from, Square to, Piece piece) {
+    template <bool kUpdateNnue>
+    void Position::movePiece(Square from, Square to, Piece piece, eval::nnue::NnueUpdates& nnueUpdates) {
         assert(from);
         assert(to);
         assert(from != to);
@@ -762,6 +778,10 @@ namespace stoat {
             m_keys.switchHandCount(piece.color(), handPt, newCount - 1, newCount);
 
             m_keys.flipPiece(captured, to);
+
+            if constexpr (kUpdateNnue) {
+                nnueUpdates.pushCapture(to, captured, newCount - 1);
+            }
         }
 
         m_colors[piece.color().idx()] ^= from.bit() ^ to.bit();
@@ -771,9 +791,14 @@ namespace stoat {
         m_mailbox[to.idx()] = piece;
 
         m_keys.movePiece(piece, from, to);
+
+        if constexpr (kUpdateNnue) {
+            nnueUpdates.pushMove(piece, piece, from, to);
+        }
     }
 
-    void Position::promotePiece(Square from, Square to, Piece piece) {
+    template <bool kUpdateNnue>
+    void Position::promotePiece(Square from, Square to, Piece piece, eval::nnue::NnueUpdates& nnueUpdates) {
         assert(from);
         assert(to);
         assert(from != to);
@@ -795,6 +820,10 @@ namespace stoat {
             m_keys.switchHandCount(piece.color(), handPt, newCount - 1, newCount);
 
             m_keys.flipPiece(captured, to);
+
+            if constexpr (kUpdateNnue) {
+                nnueUpdates.pushCapture(to, captured, newCount - 1);
+            }
         }
 
         const auto promoted = piece.promoted();
@@ -809,9 +838,14 @@ namespace stoat {
 
         m_keys.flipPiece(piece, from);
         m_keys.flipPiece(promoted, to);
+
+        if constexpr (kUpdateNnue) {
+            nnueUpdates.pushMove(piece, promoted, from, to);
+        }
     }
 
-    void Position::dropPiece(Square sq, Piece piece) {
+    template <bool kUpdateNnue>
+    void Position::dropPiece(Square sq, Piece piece, eval::nnue::NnueUpdates& nnueUpdates) {
         auto& hand = m_hands[piece.color().idx()];
 
         assert(!pieceOn(sq));
@@ -821,6 +855,10 @@ namespace stoat {
 
         const auto newCount = hand.decrement(piece.type());
         m_keys.switchHandCount(piece.color(), piece.type(), newCount + 1, newCount);
+
+        if constexpr (kUpdateNnue) {
+            nnueUpdates.pushDrop(piece, sq, newCount + 1);
+        }
     }
 
     void Position::updateAttacks() {

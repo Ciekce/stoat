@@ -22,7 +22,9 @@
 
 #include "../core.h"
 #include "../position.h"
+#include "nnue.h"
 
 namespace stoat::eval {
-    [[nodiscard]] Score staticEval(const Position& pos);
-}
+    [[nodiscard]] Score staticEval(const Position& pos, const nnue::NnueState& nnueState);
+    [[nodiscard]] Score staticEvalOnce(const Position& pos);
+} // namespace stoat::eval
