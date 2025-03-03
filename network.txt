@@ -1,1 +1,1 @@
-testnet6
+testnet10
