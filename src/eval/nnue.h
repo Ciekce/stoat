@@ -20,10 +20,12 @@
 
 #include "../types.h"
 
+#include <array>
 #include <limits>
 #include <utility>
 #include <vector>
 
+#include "../core.h"
 #include "../position.h"
 #include "../util/static_vector.h"
 #include "arch.h"

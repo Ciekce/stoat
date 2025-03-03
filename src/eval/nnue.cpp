@@ -34,7 +34,6 @@
     #undef ST_MSVC
 #endif
 
-#include "../core.h"
 #include "../util/multi_array.h"
 
 namespace {
