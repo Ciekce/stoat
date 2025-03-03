@@ -156,7 +156,9 @@ namespace stoat::datagen {
             keyHistory.reserve(1024);
 
             auto& thread = searcher.mainThread();
+
             thread.maxDepth = kMaxDepth;
+            thread.datagen = true;
 
             format::Stoatpack format{};
 

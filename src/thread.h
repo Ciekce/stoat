@@ -76,6 +76,8 @@ namespace stoat {
 
         i32 maxDepth{};
 
+        bool datagen{false};
+
         Position rootPos{};
         std::vector<u64> keyHistory{};
 
