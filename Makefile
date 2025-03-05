@@ -1,4 +1,5 @@
 VERSION := $(file < version.txt)
+DEFAULT_NET := $(file < network.txt)
 
 ifndef EXE
     EXE = stoat-$(VERSION)
@@ -6,7 +7,8 @@ ifndef EXE
 endif
 
 ifndef EVALFILE
-    $(error no evalfile specified)
+    EVALFILE = $(DEFAULT_NET).nnue
+    NO_EVALFILE_SET = true
 endif
 
 SOURCES := src/main.cpp src/position.cpp src/util/split.cpp src/move.cpp src/movegen.cpp src/perft.cpp src/util/timer.cpp src/attacks/sliders/bmi2.cpp src/protocol/handler.cpp src/protocol/uci_like.cpp src/protocol/usi.cpp src/protocol/uci.cpp src/search.cpp src/eval/eval.cpp src/limit.cpp src/bench.cpp src/thread.cpp src/attacks/sliders/black_magic.cpp src/ttable.cpp src/movepick.cpp src/see.cpp src/datagen/format/stoatpack.cpp src/datagen/format/stoatformat.cpp src/datagen/datagen.cpp src/util/ctrlc.cpp src/eval/nnue.cpp
@@ -67,7 +69,7 @@ ifeq ($(COMMIT_HASH),on)
 endif
 
 define build
-    $(CXX) $(CXXFLAGS) $(CXXFLAGS_$1) $(CXXFLAGS_$2) $(LDFLAGS) -o $(EXE)$(if $(NO_EXE_SET),-$3)$(SUFFIX) $^
+    $(CXX) $(CXXFLAGS) $(CXXFLAGS_$1) $(CXXFLAGS_$2) $(LDFLAGS) -o $(EXE)$(if $(NO_EXE_SET),-$3)$(SUFFIX) $(filter-out $(EVALFILE),$^)
 endef
 
 all: native
@@ -76,12 +78,20 @@ all: native
 
 .DEFAULT_GOAL := native
 
-$(EXE): $(SOURCES)
+ifdef NO_EVALFILE_SET
+$(EVALFILE):
+	$(info Downloading default network $(DEFAULT_NET).nnue)
+	curl -sOL https://github.com/Ciekce/stoat-nets/releases/download/$(DEFAULT_NET)/$(DEFAULT_NET).nnue
+
+download-net: $(EVALFILE)
+endif
+
+$(EXE): $(EVALFILE) $(SOURCES)
 	$(call build,NATIVE,RELEASE,native)
 
 native: $(EXE)
 
-sanitizer: $(SOURCES)
+sanitizer: $(EVALFILE) $(SOURCES)
 	$(call build,NATIVE,SANITIZER,native)
 
 clean:
