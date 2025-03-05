@@ -430,6 +430,13 @@ namespace stoat {
                 return staticEval;
             }
 
+            if (depth <= 4 && std::abs(alpha) < 2000 && staticEval + 300 * depth <= alpha) {
+                const auto score = qsearch(thread, pos, ply, alpha, alpha + 1);
+                if (score <= alpha) {
+                    return score;
+                }
+            }
+
             if (depth >= 4 && staticEval >= beta && !parent->move.isNull()) {
                 const auto r = 3 + depth / 6;
 
