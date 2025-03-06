@@ -35,6 +35,10 @@ namespace stoat {
         kNonCaptures,
         kQsearchGenerateCaptures,
         kQsearchCaptures,
+        kQsearchEvasionsGenerateCaptures,
+        kQsearchEvasionsCaptures,
+        kQsearchEvasionsGenerateNonCaptures,
+        kQsearchEvasionsNonCaptures,
         kEnd,
     };
 
@@ -53,6 +57,10 @@ namespace stoat {
 
         [[nodiscard]] inline MovegenStage stage() {
             return m_stage;
+        }
+
+        inline void skipNonCaptures() {
+            m_skipNonCaptures = true;
         }
 
         [[nodiscard]] static MoveGenerator main(const Position& pos, Move ttMove);
@@ -78,6 +86,8 @@ namespace stoat {
         movegen::MoveList m_moves{};
 
         Move m_ttMove;
+
+        bool m_skipNonCaptures{false};
 
         usize m_idx{};
         usize m_end{};
