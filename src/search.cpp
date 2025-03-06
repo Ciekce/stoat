@@ -462,21 +462,34 @@ namespace stoat {
             --depth;
         }
 
-        const auto staticEval = eval::staticEval(pos, thread.nnueState);
+        curr.staticEval = pos.isInCheck() ? kScoreNone : eval::staticEval(pos, thread.nnueState);
 
         if (!kPvNode && !pos.isInCheck()) {
-            if (depth <= 4 && staticEval - 80 * depth >= beta) {
-                return staticEval;
+            const bool improving = [&] {
+                if (pos.isInCheck()) {
+                    return false;
+                }
+                if (ply > 1 && thread.stack[ply - 2].staticEval != kScoreNone) {
+                    return curr.staticEval > thread.stack[ply - 2].staticEval;
+                }
+                if (ply > 3 && thread.stack[ply - 4].staticEval != kScoreNone) {
+                    return curr.staticEval > thread.stack[ply - 4].staticEval;
+                }
+                return true;
+            }();
+
+            if (depth <= 4 && curr.staticEval - 80 * (depth - improving) >= beta) {
+                return curr.staticEval;
             }
 
-            if (depth <= 4 && std::abs(alpha) < 2000 && staticEval + 300 * depth <= alpha) {
+            if (depth <= 4 && std::abs(alpha) < 2000 && curr.staticEval + 300 * depth <= alpha) {
                 const auto score = qsearch(thread, pos, ply, alpha, alpha + 1);
                 if (score <= alpha) {
                     return score;
                 }
             }
 
-            if (depth >= 4 && staticEval >= beta && !parent->move.isNull()) {
+            if (depth >= 4 && curr.staticEval >= beta && !parent->move.isNull()) {
                 const auto r = 3 + depth / 6;
 
                 const auto [newPos, guard] = thread.applyNullMove(ply, pos);
@@ -518,7 +531,7 @@ namespace stoat {
                 }
 
                 if (depth <= 4 && !pos.isInCheck() && alpha < 2000 && !pos.isCapture(move)
-                    && staticEval + 150 + 100 * depth <= alpha)
+                    && curr.staticEval + 150 + 100 * depth <= alpha)
                 {
                     continue;
                 }
