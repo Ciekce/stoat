@@ -313,7 +313,32 @@ namespace stoat {
             thread.rootDepth = depth;
             thread.resetSeldepth();
 
-            const auto score = search<true, true>(thread, thread.rootPos, rootPv, depth, 0, -kScoreInf, kScoreInf);
+            static constexpr i32 kWindow = 20;
+
+            auto alpha = -kScoreInf;
+            auto beta = kScoreInf;
+
+            if (depth >= 3) {
+                alpha = std::max(thread.lastScore - kWindow, -kScoreInf);
+                beta = std::min(thread.lastScore + kWindow, kScoreInf);
+            }
+
+            Score score;
+
+            while (true) {
+                score = search<true, true>(thread, thread.rootPos, rootPv, depth, 0, alpha, beta);
+
+                if (hasStopped()) {
+                    break;
+                }
+
+                if (score <= alpha || score >= beta) {
+                    alpha = -kScoreInf;
+                    beta = kScoreInf;
+                } else {
+                    break;
+                }
+            }
 
             if (hasStopped()) {
                 break;
