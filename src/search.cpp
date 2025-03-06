@@ -313,14 +313,14 @@ namespace stoat {
             thread.rootDepth = depth;
             thread.resetSeldepth();
 
-            static constexpr i32 kWindow = 20;
+            i32 window = 20;
 
             auto alpha = -kScoreInf;
             auto beta = kScoreInf;
 
             if (depth >= 3) {
-                alpha = std::max(thread.lastScore - kWindow, -kScoreInf);
-                beta = std::min(thread.lastScore + kWindow, kScoreInf);
+                alpha = std::max(thread.lastScore - window, -kScoreInf);
+                beta = std::min(thread.lastScore + window, kScoreInf);
             }
 
             Score score;
@@ -332,12 +332,15 @@ namespace stoat {
                     break;
                 }
 
-                if (score <= alpha || score >= beta) {
-                    alpha = -kScoreInf;
-                    beta = kScoreInf;
+                if (score <= alpha) {
+                    alpha = std::max(score - window, -kScoreInf);
+                } else if (score >= beta) {
+                    beta = std::min(score + window, kScoreInf);
                 } else {
                     break;
                 }
+
+                window += window;
             }
 
             if (hasStopped()) {
