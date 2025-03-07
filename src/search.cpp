@@ -33,6 +33,16 @@ namespace stoat {
     namespace {
         constexpr f64 kWideningReportDelay = 1.5;
 
+        constexpr auto kLmpTable = [] {
+            std::array<i32, 32> result{};
+
+            for (i32 depth = 0; depth < result.size(); ++depth) {
+                result[depth] = 4 + 2 * depth * depth;
+            }
+
+            return result;
+        }();
+
         // [depth][move index]
         const auto s_lmrTable = [] {
             constexpr f64 kBase = 0.2;
@@ -532,6 +542,10 @@ namespace stoat {
             const auto baseLmr = s_lmrTable[depth][std::min<u32>(legalMoves, 63)];
 
             if (!kRootNode && bestScore > -kScoreWin && (!kPvNode || !thread.datagen)) {
+                if (legalMoves >= kLmpTable[std::min<usize>(depth, kLmpTable.size())]) {
+                    generator.skipNonCaptures();
+                }
+
                 const auto seeThreshold = pos.isCapture(move) ? -100 * depth * depth : -20 * depth * depth;
                 if (!see::see(pos, move, seeThreshold)) {
                     continue;
