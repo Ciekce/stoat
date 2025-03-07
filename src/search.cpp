@@ -33,11 +33,16 @@ namespace stoat {
     namespace {
         constexpr f64 kWideningReportDelay = 1.5;
 
-        constexpr auto kLmpTable = [] {
-            std::array<i32, 32> result{};
+        constexpr usize kLmpTableSize = 32;
 
-            for (i32 depth = 0; depth < result.size(); ++depth) {
-                result[depth] = 4 + 2 * depth * depth;
+        // [improving][clamped depth]
+        constexpr auto kLmpTable = [] {
+            util::MultiArray<i32, 2, kLmpTableSize> result{};
+
+            for (const bool improving : {false, true}) {
+                for (i32 depth = 0; depth < kLmpTableSize; ++depth) {
+                    result[improving][depth] = (4 + 2 * depth * depth) / (2 - improving);
+                }
             }
 
             return result;
@@ -80,6 +85,14 @@ namespace stoat {
 
     Searcher::Searcher(usize ttSizeMb) :
             m_ttable{ttSizeMb} {
+        for (i32 i = 0; i < 2; ++i) {
+            std::cout << "kLmpTable[" << i << "] =";
+            for (i32 j = 0; j < 32; ++j) {
+                std::cout << " " << kLmpTable[i][j];
+            }
+            std::cout << std::endl;
+        }
+
         setThreadCount(1);
     }
 
@@ -481,20 +494,20 @@ namespace stoat {
 
         curr.staticEval = pos.isInCheck() ? kScoreNone : eval::staticEval(pos, thread.nnueState);
 
-        if (!kPvNode && !pos.isInCheck()) {
-            const bool improving = [&] {
-                if (pos.isInCheck()) {
-                    return false;
-                }
-                if (ply > 1 && thread.stack[ply - 2].staticEval != kScoreNone) {
-                    return curr.staticEval > thread.stack[ply - 2].staticEval;
-                }
-                if (ply > 3 && thread.stack[ply - 4].staticEval != kScoreNone) {
-                    return curr.staticEval > thread.stack[ply - 4].staticEval;
-                }
-                return true;
-            }();
+        const bool improving = [&] {
+            if (pos.isInCheck()) {
+                return false;
+            }
+            if (ply > 1 && thread.stack[ply - 2].staticEval != kScoreNone) {
+                return curr.staticEval > thread.stack[ply - 2].staticEval;
+            }
+            if (ply > 3 && thread.stack[ply - 4].staticEval != kScoreNone) {
+                return curr.staticEval > thread.stack[ply - 4].staticEval;
+            }
+            return true;
+        }();
 
+        if (!kPvNode && !pos.isInCheck()) {
             if (depth <= 4 && curr.staticEval - 80 * (depth - improving) >= beta) {
                 return curr.staticEval;
             }
@@ -544,7 +557,7 @@ namespace stoat {
             const auto baseLmr = s_lmrTable[depth][std::min<u32>(legalMoves, 63)];
 
             if (!kRootNode && bestScore > -kScoreWin && (!kPvNode || !thread.datagen)) {
-                if (legalMoves >= kLmpTable[std::min<usize>(depth, kLmpTable.size())]) {
+                if (legalMoves >= kLmpTable[improving][std::min<usize>(depth, kLmpTableSize)]) {
                     generator.skipNonCaptures();
                 }
 
