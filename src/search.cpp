@@ -513,6 +513,8 @@ namespace stoat {
 
         auto generator = MoveGenerator::main(pos, ttEntry.move, thread.history);
 
+        util::StaticVector<Move, 32> capturesTried{};
+
         u32 legalMoves{};
 
         while (const auto move = generator.next()) {
@@ -613,6 +615,10 @@ namespace stoat {
                 ttFlag = tt::Flag::kLowerBound;
                 break;
             }
+
+            if (move != bestMove && pos.isCapture(move)) {
+                capturesTried.tryPush(move);
+            }
         }
 
         if (legalMoves == 0) {
@@ -623,6 +629,10 @@ namespace stoat {
         if (bestMove && pos.isCapture(bestMove)) {
             const auto bonus = historyBonus(depth);
             thread.history.updateCaptureScore(bestMove, bonus);
+
+            for (const auto prevCapture : capturesTried) {
+                thread.history.updateCaptureScore(prevCapture, -bonus);
+            }
         }
 
         m_ttable.put(pos.key(), bestScore, bestMove, depth, ply, ttFlag);

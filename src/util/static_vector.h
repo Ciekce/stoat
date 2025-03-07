@@ -45,6 +45,24 @@ namespace stoat::util {
             m_data[m_size++] = std::move(elem);
         }
 
+        inline bool tryPush(const T& elem) {
+            if (m_size < Capacity) {
+                push(elem);
+                return true;
+            }
+
+            return false;
+        }
+
+        inline bool tryPush(T&& elem) {
+            if (m_size < Capacity) {
+                push(elem);
+                return true;
+            }
+
+            return false;
+        }
+
         inline void clear() {
             m_size = 0;
         }
