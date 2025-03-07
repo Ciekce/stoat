@@ -383,6 +383,8 @@ namespace stoat {
             }
 
             if (thread.isMainThread()) {
+                m_limiter->update(depth, thread.lastPv.moves[0]);
+
                 if (m_limiter->stopSoft(thread.loadNodes())) {
                     break;
                 }
@@ -562,6 +564,8 @@ namespace stoat {
                 curr.pv.length = 0;
             }
 
+            const auto prevNodes = thread.loadNodes();
+
             ++legalMoves;
 
             const auto [newPos, guard] = thread.applyMove(ply, pos, move);
@@ -607,6 +611,10 @@ namespace stoat {
 
             if (hasStopped()) {
                 return 0;
+            }
+
+            if (kRootNode && thread.isMainThread()) {
+                m_limiter->addMoveNodes(move, thread.loadNodes() - prevNodes);
             }
 
             if (score > bestScore) {

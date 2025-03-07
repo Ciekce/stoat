@@ -24,12 +24,18 @@
 #include <memory>
 #include <vector>
 
+#include "move.h"
+#include "util/multi_array.h"
 #include "util/timer.h"
 
 namespace stoat::limit {
     class ISearchLimiter {
     public:
         virtual ~ISearchLimiter() = default;
+
+        virtual void addMoveNodes(Move move, usize nodes) {}
+
+        virtual void update(i32 depth, Move bestMove) {}
 
         [[nodiscard]] virtual bool stopSoft(usize nodes) = 0;
         [[nodiscard]] virtual bool stopHard(usize nodes) = 0;
@@ -40,8 +46,20 @@ namespace stoat::limit {
         ~CompoundLimiter() final = default;
 
         template <typename T, typename... Args>
-        inline auto addLimiter(Args&&... args) {
+        inline void addLimiter(Args&&... args) {
             m_limiters.push_back(std::make_unique<T>(std::forward<Args>(args)...));
+        }
+
+        inline void addMoveNodes(Move move, usize nodes) final {
+            for (auto& limiter : m_limiters) {
+                limiter->addMoveNodes(move, nodes);
+            }
+        }
+
+        inline void update(i32 depth, Move bestMove) final {
+            for (auto& limiter : m_limiters) {
+                limiter->update(depth, bestMove);
+            }
         }
 
         [[nodiscard]] inline bool stopSoft(usize nodes) final {
@@ -105,6 +123,10 @@ namespace stoat::limit {
         TimeManager(util::Instant startTime, const TimeLimits& limits);
         ~TimeManager() final = default;
 
+        void addMoveNodes(Move move, usize nodes) final;
+
+        void update(i32 depth, Move bestMove) final;
+
         [[nodiscard]] bool stopSoft(usize nodes) final;
         [[nodiscard]] bool stopHard(usize nodes) final;
 
@@ -113,5 +135,14 @@ namespace stoat::limit {
 
         f64 m_optTime;
         f64 m_maxTime;
+
+        f64 m_scale{1.0};
+
+        // [promo][from][to]
+        util::MultiArray<usize, 2, Squares::kCount, Squares::kCount> m_nonDrop{};
+        // [dropped piece type][drop square]
+        util::MultiArray<usize, PieceTypes::kCount, Squares::kCount> m_drop{};
+
+        usize m_totalNodes{};
     };
 } // namespace stoat::limit
