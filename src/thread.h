@@ -26,6 +26,7 @@
 
 #include "core.h"
 #include "eval/nnue.h"
+#include "history.h"
 #include "position.h"
 #include "pv.h"
 
@@ -95,6 +96,8 @@ namespace stoat {
 
         Score lastScore{};
         PvList lastPv{};
+
+        HistoryTables history{};
 
         eval::nnue::NnueState nnueState{};
 

@@ -11,7 +11,7 @@ ifndef EVALFILE
     NO_EVALFILE_SET = true
 endif
 
-SOURCES := src/main.cpp src/position.cpp src/util/split.cpp src/move.cpp src/movegen.cpp src/perft.cpp src/util/timer.cpp src/attacks/sliders/bmi2.cpp src/protocol/handler.cpp src/protocol/uci_like.cpp src/protocol/usi.cpp src/protocol/uci.cpp src/search.cpp src/eval/eval.cpp src/limit.cpp src/bench.cpp src/thread.cpp src/attacks/sliders/black_magic.cpp src/ttable.cpp src/movepick.cpp src/see.cpp src/datagen/format/stoatpack.cpp src/datagen/format/stoatformat.cpp src/datagen/datagen.cpp src/util/ctrlc.cpp src/eval/nnue.cpp
+SOURCES := src/main.cpp src/position.cpp src/util/split.cpp src/move.cpp src/movegen.cpp src/perft.cpp src/util/timer.cpp src/attacks/sliders/bmi2.cpp src/protocol/handler.cpp src/protocol/uci_like.cpp src/protocol/usi.cpp src/protocol/uci.cpp src/search.cpp src/eval/eval.cpp src/limit.cpp src/bench.cpp src/thread.cpp src/attacks/sliders/black_magic.cpp src/ttable.cpp src/movepick.cpp src/see.cpp src/datagen/format/stoatpack.cpp src/datagen/format/stoatformat.cpp src/datagen/datagen.cpp src/util/ctrlc.cpp src/eval/nnue.cpp src/history.cpp
 
 SUFFIX :=
 

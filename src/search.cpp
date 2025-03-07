@@ -23,6 +23,7 @@
 
 #include "core.h"
 #include "eval/eval.h"
+#include "history.h"
 #include "movepick.h"
 #include "protocol/handler.h"
 #include "see.h"
@@ -81,6 +82,10 @@ namespace stoat {
         // Finalisation (init) clears the TT, so don't clear it twice
         if (!m_ttable.finalize()) {
             m_ttable.clear();
+        }
+
+        for (auto& thread : m_threads) {
+            thread.history.clear();
         }
     }
 
@@ -506,7 +511,7 @@ namespace stoat {
 
         auto ttFlag = tt::Flag::kUpperBound;
 
-        auto generator = MoveGenerator::main(pos, ttEntry.move);
+        auto generator = MoveGenerator::main(pos, ttEntry.move, thread.history);
 
         u32 legalMoves{};
 
@@ -615,6 +620,11 @@ namespace stoat {
             return -kScoreMate + ply;
         }
 
+        if (bestMove && pos.isCapture(bestMove)) {
+            const auto bonus = historyBonus(depth);
+            thread.history.updateCaptureScore(bestMove, bonus);
+        }
+
         m_ttable.put(pos.key(), bestScore, bestMove, depth, ply, ttFlag);
 
         return bestScore;
@@ -659,7 +669,7 @@ namespace stoat {
 
         auto bestScore = staticEval;
 
-        auto generator = MoveGenerator::qsearch(pos);
+        auto generator = MoveGenerator::qsearch(pos, thread.history);
 
         while (const auto move = generator.next()) {
             assert(pos.isPseudolegal(move));

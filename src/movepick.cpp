@@ -35,6 +35,8 @@ namespace stoat {
                 movegen::generateCaptures(m_moves, m_pos);
                 m_end = m_moves.size();
 
+                scoreCaptures();
+
                 ++m_stage;
                 [[fallthrough]];
             }
@@ -72,6 +74,8 @@ namespace stoat {
             case MovegenStage::kQsearchGenerateCaptures: {
                 movegen::generateCaptures(m_moves, m_pos);
                 m_end = m_moves.size();
+
+                scoreCaptures();
 
                 ++m_stage;
                 [[fallthrough]];
@@ -129,16 +133,52 @@ namespace stoat {
         }
     }
 
-    MoveGenerator MoveGenerator::main(const Position& pos, Move ttMove) {
-        return MoveGenerator{MovegenStage::kTtMove, pos, ttMove};
+    MoveGenerator MoveGenerator::main(const Position& pos, Move ttMove, const HistoryTables& history) {
+        return MoveGenerator{MovegenStage::kTtMove, pos, ttMove, history};
     }
 
-    MoveGenerator MoveGenerator::qsearch(const Position& pos) {
+    MoveGenerator MoveGenerator::qsearch(const Position& pos, const HistoryTables& history) {
         const auto initialStage =
             pos.isInCheck() ? MovegenStage::kQsearchEvasionsGenerateCaptures : MovegenStage::kQsearchGenerateCaptures;
-        return MoveGenerator{initialStage, pos, kNullMove};
+        return MoveGenerator{initialStage, pos, kNullMove, history};
     }
 
-    MoveGenerator::MoveGenerator(MovegenStage initialStage, const Position& pos, Move ttMove) :
-            m_stage{initialStage}, m_pos{pos}, m_ttMove{ttMove} {}
+    MoveGenerator::MoveGenerator(
+        MovegenStage initialStage,
+        const Position& pos,
+        Move ttMove,
+        const HistoryTables& history
+    ) :
+            m_stage{initialStage}, m_pos{pos}, m_ttMove{ttMove}, m_history{history} {}
+
+    i32 MoveGenerator::scoreCapture(Move move) {
+        assert(m_history);
+        return m_history.captureScore(move);
+    }
+
+    void MoveGenerator::scoreCaptures() {
+        assert(m_history);
+        for (usize idx = m_idx; idx < m_end; ++idx) {
+            m_scores[idx] = scoreCapture(m_moves[idx]);
+        }
+    }
+
+    usize MoveGenerator::findNext() {
+        auto bestIdx = m_idx;
+        auto bestScore = m_scores[m_idx];
+
+        for (usize idx = m_idx + 1; idx < m_end; ++idx) {
+            if (m_scores[idx] > bestScore) {
+                bestIdx = idx;
+                bestScore = m_scores[idx];
+            }
+        }
+
+        if (bestIdx != m_idx) {
+            std::swap(m_moves[m_idx], m_moves[bestIdx]);
+            std::swap(m_scores[m_idx], m_scores[bestIdx]);
+        }
+
+        return m_idx++;
+    }
 } // namespace stoat

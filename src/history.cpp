@@ -16,20 +16,20 @@
  * along with Stoat. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "history.h"
 
-#include "types.h"
+#include <cstring>
 
-#include "move.h"
-#include "position.h"
-#include "util/static_vector.h"
+namespace stoat {
+    void HistoryTables::clear() {
+        std::memset(m_capture.data(), 0, sizeof(m_capture));
+    }
 
-namespace stoat::movegen {
-    constexpr usize kMoveListCapacity = 600;
-    using MoveList = util::StaticVector<Move, kMoveListCapacity>;
+    HistoryScore HistoryTables::captureScore(Move move) const {
+        return m_capture[move.isPromo()][move.from().idx()][move.to().idx()];
+    }
 
-    void generateAll(MoveList& dst, const Position& pos);
-    void generateCaptures(MoveList& dst, const Position& pos);
-    void generateNonCaptures(MoveList& dst, const Position& pos);
-    void generateRecaptures(MoveList& dst, const Position& pos, Square captureSq);
-} // namespace stoat::movegen
+    void HistoryTables::updateCaptureScore(Move move, HistoryScore bonus) {
+        m_capture[move.isPromo()][move.from().idx()][move.to().idx()].update(bonus);
+    }
+} // namespace stoat

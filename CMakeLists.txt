@@ -28,7 +28,7 @@ add_executable(stoat-native src/main.cpp src/types.h src/core.h src/bitboard.h s
 	src/util/range.h src/movepick.h src/movepick.cpp src/see.h src/see.cpp src/datagen/format/format.h src/datagen/format/stoatpack.h
 	src/datagen/format/stoatpack.cpp src/datagen/format/stoatformat.h src/datagen/format/stoatformat.cpp src/util/u4array.h
 	src/datagen/datagen.h src/datagen/datagen.cpp src/util/ctrlc.h src/util/ctrlc.cpp src/eval/arch.h src/eval/nnue.h
-	src/eval/nnue.cpp
+	src/eval/nnue.cpp src/history.h src/history.cpp
 )
 
 target_compile_options(stoat-native PUBLIC -march=native $<$<CONFIG:Release>:-flto>)
