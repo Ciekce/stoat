@@ -40,6 +40,9 @@ namespace stoat {
         kQsearchEvasionsCaptures,
         kQsearchEvasionsGenerateNonCaptures,
         kQsearchEvasionsNonCaptures,
+        kProbcutTtMove,
+        kProbcutGenerateCaptures,
+        kProbcutCaptures,
         kEnd,
     };
 
@@ -66,9 +69,10 @@ namespace stoat {
 
         [[nodiscard]] static MoveGenerator main(const Position& pos, Move ttMove, const HistoryTables& history);
         [[nodiscard]] static MoveGenerator qsearch(const Position& pos, const HistoryTables& history);
+        [[nodiscard]] static MoveGenerator probcut(const Position& pos, Move ttMove);
 
     private:
-        MoveGenerator(MovegenStage initialStage, const Position& pos, Move ttMove, const HistoryTables& history);
+        MoveGenerator(MovegenStage initialStage, const Position& pos, Move ttMove, const HistoryTables* history);
 
         [[nodiscard]] i32 scoreNonCapture(Move move);
         void scoreNonCaptures();
@@ -96,7 +100,7 @@ namespace stoat {
         std::array<i32, movegen::kMoveListCapacity> m_scores{};
 
         Move m_ttMove;
-        const HistoryTables& m_history;
+        const HistoryTables* m_history;
 
         bool m_skipNonCaptures{false};
 

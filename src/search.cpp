@@ -516,6 +516,38 @@ namespace stoat {
                     return score > kScoreWin ? beta : score;
                 }
             }
+
+            const auto probcutBeta = beta + 250;
+            const auto probcutDepth = depth - 3;
+
+            if (depth >= 7 && std::abs(beta) < kScoreWin && (!ttEntry.move || pos.isCapture(ttEntry.move))
+                && !(ttHit && ttEntry.depth >= probcutDepth && ttEntry.score < probcutBeta))
+            {
+                auto generator = MoveGenerator::probcut(pos, ttEntry.move);
+                while (const auto move = generator.next()) {
+                    if (!pos.isLegal(move)) {
+                        continue;
+                    }
+
+                    const auto [newPos, guard] = thread.applyMove(ply, pos, move);
+
+                    auto score = -qsearch(thread, newPos, ply + 1, -probcutBeta, -probcutBeta + 1);
+
+                    if (score >= probcutBeta) {
+                        score =
+                            -search(thread, newPos, curr.pv, probcutDepth - 1, ply + 1, -probcutBeta, -probcutBeta + 1);
+                    }
+
+                    if (hasStopped()) {
+                        return 0;
+                    }
+
+                    if (score >= probcutBeta) {
+                        m_ttable.put(pos.key(), score, move, probcutDepth, ply, tt::Flag::kLowerBound);
+                        return score;
+                    }
+                }
+            }
         }
 
         auto bestMove = kNullMove;

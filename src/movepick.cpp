@@ -128,32 +128,63 @@ namespace stoat {
                 return kNullMove;
             }
 
+            case MovegenStage::kProbcutTtMove: {
+                ++m_stage;
+
+                if (m_ttMove && m_pos.isPseudolegal(m_ttMove)) {
+                    return m_ttMove;
+                }
+
+                [[fallthrough]];
+            }
+
+            case MovegenStage::kProbcutGenerateCaptures: {
+                movegen::generateCaptures(m_moves, m_pos);
+                m_end = m_moves.size();
+
+                ++m_stage;
+                [[fallthrough]];
+            }
+
+            case MovegenStage::kProbcutCaptures: {
+                if (const auto move = selectNext([this](Move move) { return move != m_ttMove; })) {
+                    return move;
+                }
+
+                m_stage = MovegenStage::kEnd;
+                return kNullMove;
+            }
+
             default:
                 return kNullMove;
         }
     }
 
     MoveGenerator MoveGenerator::main(const Position& pos, Move ttMove, const HistoryTables& history) {
-        return MoveGenerator{MovegenStage::kTtMove, pos, ttMove, history};
+        return MoveGenerator{MovegenStage::kTtMove, pos, ttMove, &history};
     }
 
     MoveGenerator MoveGenerator::qsearch(const Position& pos, const HistoryTables& history) {
         const auto initialStage =
             pos.isInCheck() ? MovegenStage::kQsearchEvasionsGenerateCaptures : MovegenStage::kQsearchGenerateCaptures;
-        return MoveGenerator{initialStage, pos, kNullMove, history};
+        return MoveGenerator{initialStage, pos, kNullMove, &history};
+    }
+
+    MoveGenerator MoveGenerator::probcut(const Position& pos, Move ttMove) {
+        return MoveGenerator{MovegenStage::kProbcutTtMove, pos, ttMove, nullptr};
     }
 
     MoveGenerator::MoveGenerator(
         MovegenStage initialStage,
         const Position& pos,
         Move ttMove,
-        const HistoryTables& history
+        const HistoryTables* history
     ) :
             m_stage{initialStage}, m_pos{pos}, m_ttMove{ttMove}, m_history{history} {}
 
     i32 MoveGenerator::scoreNonCapture(Move move) {
         assert(m_history);
-        return m_history.nonCaptureScore(move);
+        return m_history->nonCaptureScore(move);
     }
 
     void MoveGenerator::scoreNonCaptures() {
