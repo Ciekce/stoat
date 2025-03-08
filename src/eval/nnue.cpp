@@ -45,30 +45,34 @@ namespace stoat::eval::nnue {
         struct Network {
             util::MultiArray<i16, kFtSize, kL1Size> ftWeights;
             std::array<i16, kL1Size> ftBiases;
-            util::MultiArray<i16, 2, kL1Size> l1Weights;
-            i16 l1Bias;
+            util::MultiArray<i16, kOutputBuckets, 2, kL1Size> l1Weights;
+            std::array<i16, kOutputBuckets> l1Biases;
         };
 
         const Network& s_network = *reinterpret_cast<const Network*>(g_defaultNetData);
 
-        [[nodiscard]] i32 forward(const Accumulator& acc, Color stm) {
+        [[nodiscard]] i32 forward(const Accumulator& acc, const Position& pos) {
+            static constexpr u32 kOutputBucketDivisor = (40 + kOutputBuckets - 1) / kOutputBuckets;
+
             const auto screlu = [](i16 v) {
                 const auto clipped = std::clamp(static_cast<i32>(v), 0, kFtQ);
                 return clipped * clipped;
             };
 
-            const std::span stmAccum = stm == Colors::kBlack ? acc.black : acc.white;
-            const std::span nstmAccum = stm == Colors::kBlack ? acc.white : acc.black;
+            const std::span stmAccum = pos.stm() == Colors::kBlack ? acc.black : acc.white;
+            const std::span nstmAccum = pos.stm() == Colors::kBlack ? acc.white : acc.black;
+
+            const auto outputBucket = (pos.occupancy().popcount() - 2) / kOutputBucketDivisor;
 
             i32 out = 0;
 
             for (u32 i = 0; i < kL1Size; ++i) {
-                out += screlu(stmAccum[i]) * s_network.l1Weights[0][i];
-                out += screlu(nstmAccum[i]) * s_network.l1Weights[1][i];
+                out += screlu(stmAccum[i]) * s_network.l1Weights[outputBucket][0][i];
+                out += screlu(nstmAccum[i]) * s_network.l1Weights[outputBucket][1][i];
             }
 
             out /= kFtQ;
-            out += s_network.l1Bias;
+            out += s_network.l1Biases[outputBucket];
 
             return out * kScale / (kFtQ * kL1Q);
         }
@@ -203,14 +207,14 @@ namespace stoat::eval::nnue {
         applyUpdates(updates, *m_curr, *m_curr);
     }
 
-    i32 NnueState::evaluate(Color stm) const {
+    i32 NnueState::evaluate(const Position& pos) const {
         assert(m_curr);
-        return forward(*m_curr, stm);
+        return forward(*m_curr, pos);
     }
 
     i32 evaluateOnce(const Position& pos) {
         Accumulator acc{};
         acc.reset(pos);
-        return forward(acc, pos.stm());
+        return forward(acc, pos);
     }
 } // namespace stoat::eval::nnue

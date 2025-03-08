@@ -22,7 +22,7 @@
 
 namespace stoat::eval {
     Score staticEval(const Position& pos, const nnue::NnueState& nnueState) {
-        const auto nnue = nnueState.evaluate(pos.stm());
+        const auto nnue = nnueState.evaluate(pos);
         return std::clamp(nnue, -kScoreWin + 1, kScoreWin - 1);
     }
 

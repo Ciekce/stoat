@@ -138,7 +138,7 @@ namespace stoat::eval::nnue {
 
         void applyInPlace(const NnueUpdates& updates);
 
-        [[nodiscard]] i32 evaluate(Color stm) const;
+        [[nodiscard]] i32 evaluate(const Position& pos) const;
 
     private:
         std::vector<Accumulator> m_accStacc{};
