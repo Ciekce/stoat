@@ -145,7 +145,7 @@ namespace stoat::eval::nnue {
     void Accumulator::reset(const Position& pos, Color c) {
         std::ranges::copy(s_network.ftBiases, color(c).begin());
 
-        const auto kings = pos.kings();
+        const auto kings = pos.kingSquares();
 
         auto occ = pos.occupancy();
         while (!occ.empty()) {
@@ -188,7 +188,7 @@ namespace stoat::eval::nnue {
         std::ranges::copy(s_network.ftBiases, black().begin());
         std::ranges::copy(s_network.ftBiases, white().begin());
 
-        const auto kings = pos.kings();
+        const auto kings = pos.kingSquares();
 
         auto occ = pos.occupancy();
         while (!occ.empty()) {

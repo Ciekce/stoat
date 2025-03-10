@@ -415,7 +415,7 @@ namespace stoat {
         const auto stm = this->stm();
         const auto nstm = this->stm().flip();
 
-        const auto stmKing = king(stm);
+        const auto stmKing = kingSq(stm);
 
         if (move.isDrop()) {
             if (isInCheck()) {
@@ -843,10 +843,10 @@ namespace stoat {
         const auto stm = this->stm();
         const auto nstm = this->stm().flip();
 
-        m_checkers = attackersTo(king(stm), nstm);
+        m_checkers = attackersTo(kingSq(stm), nstm);
         m_pinned = Bitboards::kEmpty;
 
-        const auto stmKing = king(stm);
+        const auto stmKing = kingSq(stm);
 
         const auto stmOcc = colorBb(stm);
         const auto nstmOcc = colorBb(nstm);

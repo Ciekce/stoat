@@ -282,7 +282,7 @@ namespace stoat::movegen {
 
             if (!pos.checkers().empty()) {
                 const auto checker = pos.checkers().lsb();
-                const auto checkRay = rayBetween(pos.king(pos.stm()), checker);
+                const auto checkRay = rayBetween(pos.kingSq(pos.stm()), checker);
 
                 dstMask &= checkRay | checker.bit();
                 dropMask &= checkRay;

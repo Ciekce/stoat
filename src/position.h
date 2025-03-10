@@ -195,12 +195,12 @@ namespace stoat {
             return m_moveCount;
         }
 
-        [[nodiscard]] inline Square king(Color c) const {
+        [[nodiscard]] inline Square kingSq(Color c) const {
             assert(c);
-            return pieceBb(PieceTypes::kKing, c).lsb();
+            return m_kingSquares.kingSq(c);
         }
 
-        [[nodiscard]] inline KingPair kings() const {
+        [[nodiscard]] inline KingPair kingSquares() const {
             return m_kingSquares;
         }
 
