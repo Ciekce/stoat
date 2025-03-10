@@ -226,9 +226,9 @@ namespace stoat {
         }
 
         if constexpr (kUpdateAction == NnueUpdateAction::kPush) {
-            nnueState->push(updates);
+            nnueState->push(newPos, updates);
         } else if constexpr (kUpdateAction == NnueUpdateAction::kApplyInPlace) {
-            nnueState->applyInPlace(updates);
+            nnueState->applyInPlace(newPos, updates);
         }
 
         ++newPos.m_moveCount;
@@ -719,6 +719,10 @@ namespace stoat {
         m_mailbox[sq.idx()] = piece;
 
         m_keys.flipPiece(piece, sq);
+
+        if (piece.type() == PieceTypes::kKing) {
+            m_kingSquares.squares[piece.color().idx()] = sq;
+        }
     }
 
     template <bool kUpdateNnue>
@@ -745,7 +749,7 @@ namespace stoat {
             m_keys.flipPiece(captured, to);
 
             if constexpr (kUpdateNnue) {
-                nnueUpdates.pushCapture(to, captured, newCount - 1);
+                nnueUpdates.pushCapture(m_kingSquares, to, captured, newCount - 1);
             }
         }
 
@@ -757,8 +761,15 @@ namespace stoat {
 
         m_keys.movePiece(piece, from, to);
 
+        if (piece.type() == PieceTypes::kKing) {
+            m_kingSquares.squares[piece.color().idx()] = to;
+            if (kUpdateNnue && eval::nnue::requiresRefresh(piece.color(), to, from)) {
+                nnueUpdates.setRefresh(piece.color());
+            }
+        }
+
         if constexpr (kUpdateNnue) {
-            nnueUpdates.pushMove(piece, piece, from, to);
+            nnueUpdates.pushMove(m_kingSquares, piece, piece, from, to);
         }
     }
 
@@ -787,7 +798,7 @@ namespace stoat {
             m_keys.flipPiece(captured, to);
 
             if constexpr (kUpdateNnue) {
-                nnueUpdates.pushCapture(to, captured, newCount - 1);
+                nnueUpdates.pushCapture(m_kingSquares, to, captured, newCount - 1);
             }
         }
 
@@ -804,8 +815,10 @@ namespace stoat {
         m_keys.flipPiece(piece, from);
         m_keys.flipPiece(promoted, to);
 
+        // kings cannot promote
+
         if constexpr (kUpdateNnue) {
-            nnueUpdates.pushMove(piece, promoted, from, to);
+            nnueUpdates.pushMove(m_kingSquares, piece, promoted, from, to);
         }
     }
 
@@ -822,7 +835,7 @@ namespace stoat {
         m_keys.switchHandCount(piece.color(), piece.type(), newCount + 1, newCount);
 
         if constexpr (kUpdateNnue) {
-            nnueUpdates.pushDrop(piece, sq, newCount + 1);
+            nnueUpdates.pushDrop(m_kingSquares, piece, sq, newCount + 1);
         }
     }
 
@@ -868,6 +881,9 @@ namespace stoat {
                 m_mailbox[sq.idx()] = piece;
             }
         }
+
+        m_kingSquares.squares[Colors::kBlack.idx()] = pieceBb(PieceTypes::kKing, Colors::kBlack).lsb();
+        m_kingSquares.squares[Colors::kWhite.idx()] = pieceBb(PieceTypes::kKing, Colors::kWhite).lsb();
 
         regenKey();
         updateAttacks();

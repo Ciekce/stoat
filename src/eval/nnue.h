@@ -21,6 +21,7 @@
 #include "../types.h"
 
 #include <array>
+#include <cassert>
 #include <limits>
 #include <utility>
 #include <vector>
@@ -37,10 +38,13 @@ namespace stoat::eval::nnue {
     constexpr u32 kHandOffset = kPieceStride * PieceTypes::kCount;
     constexpr u32 kColorStride = kHandOffset + kHandFeatures;
 
-    [[nodiscard]] constexpr u32 psqtFeatureIndex(Color perspective, Piece piece, Square sq) {
-        if (perspective == Colors::kWhite) {
-            sq = sq.rotate();
-        }
+    [[nodiscard]] constexpr Square transformRelativeSquare(Square kingSq, Square sq) {
+        return kingSq.file() > 4 ? sq.flipFile() : sq;
+    }
+
+    [[nodiscard]] constexpr u32 psqtFeatureIndex(Color perspective, KingPair kings, Piece piece, Square sq) {
+        sq = sq.relative(perspective);
+        sq = transformRelativeSquare(kings.relativeKingSq(perspective), sq);
         return kColorStride * (piece.color() != perspective) + kPieceStride * piece.type().idx() + sq.idx();
     }
 
@@ -64,33 +68,35 @@ namespace stoat::eval::nnue {
     }
 
     struct NnueUpdates {
-        using Update = std::pair<u32, u32>;
+        using Update = std::array<u32, 2>;
+
+        std::array<bool, 2> refresh{};
 
         util::StaticVector<Update, 2> adds{};
         util::StaticVector<Update, 2> subs{};
 
-        inline void pushMove(Piece src, Piece dst, Square from, Square to) {
+        inline void pushMove(KingPair kings, Piece src, Piece dst, Square from, Square to) {
             assert(src);
             assert(dst);
             assert(from);
             assert(to);
             assert(src.color() == dst.color());
 
-            const auto blackSrcFeature = psqtFeatureIndex(Colors::kBlack, src, from);
-            const auto whiteSrcFeature = psqtFeatureIndex(Colors::kWhite, src, from);
+            const auto blackSrcFeature = psqtFeatureIndex(Colors::kBlack, kings, src, from);
+            const auto whiteSrcFeature = psqtFeatureIndex(Colors::kWhite, kings, src, from);
             subs.push({blackSrcFeature, whiteSrcFeature});
 
-            const auto blackDstFeature = psqtFeatureIndex(Colors::kBlack, dst, to);
-            const auto whiteDstFeature = psqtFeatureIndex(Colors::kWhite, dst, to);
+            const auto blackDstFeature = psqtFeatureIndex(Colors::kBlack, kings, dst, to);
+            const auto whiteDstFeature = psqtFeatureIndex(Colors::kWhite, kings, dst, to);
             adds.push({blackDstFeature, whiteDstFeature});
         }
 
-        inline void pushCapture(Square sq, Piece captured, u32 currHandCount) {
+        inline void pushCapture(KingPair kings, Square sq, Piece captured, u32 currHandCount) {
             assert(sq);
             assert(captured);
 
-            const auto blackCapturedFeature = psqtFeatureIndex(Colors::kBlack, captured, sq);
-            const auto whiteCapturedFeature = psqtFeatureIndex(Colors::kWhite, captured, sq);
+            const auto blackCapturedFeature = psqtFeatureIndex(Colors::kBlack, kings, captured, sq);
+            const auto whiteCapturedFeature = psqtFeatureIndex(Colors::kWhite, kings, captured, sq);
             subs.push({blackCapturedFeature, whiteCapturedFeature});
 
             const auto blackHandFeature =
@@ -100,13 +106,13 @@ namespace stoat::eval::nnue {
             adds.push({blackHandFeature, whiteHandFeature});
         }
 
-        inline void pushDrop(Piece piece, Square to, u32 currHandCount) {
+        inline void pushDrop(KingPair kings, Piece piece, Square to, u32 currHandCount) {
             assert(piece);
             assert(to);
             assert(currHandCount > 0);
 
-            const auto blackDroppedFeature = psqtFeatureIndex(Colors::kBlack, piece, to);
-            const auto whiteDroppedFeature = psqtFeatureIndex(Colors::kWhite, piece, to);
+            const auto blackDroppedFeature = psqtFeatureIndex(Colors::kBlack, kings, piece, to);
+            const auto whiteDroppedFeature = psqtFeatureIndex(Colors::kWhite, kings, piece, to);
             adds.push({blackDroppedFeature, whiteDroppedFeature});
 
             const auto blackHandFeature =
@@ -115,15 +121,55 @@ namespace stoat::eval::nnue {
                 handFeatureIndex(Colors::kWhite, piece.type(), piece.color(), currHandCount - 1);
             subs.push({blackHandFeature, whiteHandFeature});
         }
+
+        inline void setRefresh(Color c) {
+            assert(c);
+            refresh[c.idx()] = true;
+        }
+
+        [[nodiscard]] inline bool requiresRefresh(Color c) const {
+            assert(c);
+            return refresh[c.idx()];
+        }
+    };
+
+    struct SingleAccumulator {
+        alignas(64) std::array<i16, kL1Size> values;
     };
 
     struct Accumulator {
-        alignas(64) std::array<i16, kL1Size> black;
-        alignas(64) std::array<i16, kL1Size> white;
+        std::array<SingleAccumulator, 2> accs;
 
+        [[nodiscard]] std::array<i16, kL1Size>& black() {
+            return accs[Colors::kBlack.idx()].values;
+        }
+
+        [[nodiscard]] std::array<i16, kL1Size>& white() {
+            return accs[Colors::kWhite.idx()].values;
+        }
+
+        [[nodiscard]] std::array<i16, kL1Size>& color(Color c) {
+            assert(c);
+            return accs[c.idx()].values;
+        }
+
+        [[nodiscard]] const std::array<i16, kL1Size>& black() const {
+            return accs[Colors::kBlack.idx()].values;
+        }
+
+        [[nodiscard]] const std::array<i16, kL1Size>& white() const {
+            return accs[Colors::kWhite.idx()].values;
+        }
+
+        [[nodiscard]] const std::array<i16, kL1Size>& color(Color c) const {
+            assert(c);
+            return accs[c.idx()].values;
+        }
+
+        void activate(Color c, u32 feature);
         void activate(u32 blackFeature, u32 whiteFeature);
-        void deactivate(u32 blackFeature, u32 whiteFeature);
 
+        void reset(const Position& pos, Color c);
         void reset(const Position& pos);
     };
 
@@ -133,10 +179,10 @@ namespace stoat::eval::nnue {
 
         void reset(const Position& pos);
 
-        void push(const NnueUpdates& updates);
+        void push(const Position& pos, const NnueUpdates& updates);
         void pop();
 
-        void applyInPlace(const NnueUpdates& updates);
+        void applyInPlace(const Position& pos, const NnueUpdates& updates);
 
         [[nodiscard]] i32 evaluate(Color stm) const;
 
@@ -146,4 +192,14 @@ namespace stoat::eval::nnue {
     };
 
     [[nodiscard]] i32 evaluateOnce(const Position& pos);
+
+    [[nodiscard]] constexpr bool requiresRefresh(Color c, Square kingSq, Square prevKingSq) {
+        assert(prevKingSq);
+        assert(kingSq);
+
+        const bool flip = kingSq.relative(c).file() > 4;
+        const bool prevFlip = prevKingSq.relative(c).file() > 4;
+
+        return flip != prevFlip;
+    }
 } // namespace stoat::eval::nnue

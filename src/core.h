@@ -566,19 +566,33 @@ namespace stoat {
             return static_cast<usize>(m_id);
         }
 
-        [[nodiscard]] u32 rank() const {
+        [[nodiscard]] constexpr i32 rank() const {
             assert(m_id != kNoneId);
-            return static_cast<u32>(m_id) / 9;
+            return static_cast<i32>(m_id) / 9;
         }
 
-        [[nodiscard]] u32 file() const {
+        [[nodiscard]] constexpr i32 file() const {
             assert(m_id != kNoneId);
-            return static_cast<u32>(m_id) % 9;
+            return static_cast<i32>(m_id) % 9;
         }
 
-        [[nodiscard]] Square rotate() const {
+        [[nodiscard]] constexpr Square rotate() const {
             assert(m_id != kNoneId);
-            return Square::fromRaw(80 - m_id);
+            return fromRaw(80 - m_id);
+        }
+
+        [[nodiscard]] constexpr Square flipFile() const {
+            assert(m_id != kNoneId);
+            return fromFileRank(8 - file(), rank());
+        }
+
+        [[nodiscard]] constexpr Square relative(Color c) const {
+            assert(m_id != kNoneId);
+            if (c == Colors::kBlack) {
+                return *this;
+            } else {
+                return rotate();
+            }
         }
 
         [[nodiscard]] constexpr u128 bit() const {

@@ -57,8 +57,8 @@ namespace stoat::eval::nnue {
                 return clipped * clipped;
             };
 
-            const std::span stmAccum = stm == Colors::kBlack ? acc.black : acc.white;
-            const std::span nstmAccum = stm == Colors::kBlack ? acc.white : acc.black;
+            const std::span stmAccum = stm == Colors::kBlack ? acc.black() : acc.white();
+            const std::span nstmAccum = stm == Colors::kBlack ? acc.white() : acc.black();
 
             i32 out = 0;
 
@@ -93,31 +93,46 @@ namespace stoat::eval::nnue {
             }
         }
 
-        void applyUpdates(const NnueUpdates& updates, const Accumulator& src, Accumulator& dst) {
+        void applyUpdates(const Position& pos, const NnueUpdates& updates, const Accumulator& src, Accumulator& dst) {
             const auto addCount = updates.adds.size();
             const auto subCount = updates.subs.size();
 
-            if (addCount == 1 && subCount == 1) {
-                const auto [blackAdd, whiteAdd] = updates.adds[0];
-                const auto [blackSub, whiteSub] = updates.subs[0];
-                addSub(src.black, dst.black, blackAdd, blackSub);
-                addSub(src.white, dst.white, whiteAdd, whiteSub);
-            } else if (addCount == 2 && subCount == 2) {
-                const auto [blackAdd1, whiteAdd1] = updates.adds[0];
-                const auto [blackAdd2, whiteAdd2] = updates.adds[1];
-                const auto [blackSub1, whiteSub1] = updates.subs[0];
-                const auto [blackSub2, whiteSub2] = updates.subs[1];
-                addAddSubSub(src.black, dst.black, blackAdd1, blackAdd2, blackSub1, blackSub2);
-                addAddSubSub(src.white, dst.white, whiteAdd1, whiteAdd2, whiteSub1, whiteSub2);
-            } else {
-                fmt::println(stderr, "??");
-                assert(false);
-                std::terminate();
+            for (const auto c : {Colors::kBlack, Colors::kWhite}) {
+                if (updates.requiresRefresh(c)) {
+                    dst.reset(pos, c);
+                    continue;
+                }
+
+                if (addCount == 1 && subCount == 1) {
+                    const auto add = updates.adds[0][c.idx()];
+                    const auto sub = updates.subs[0][c.idx()];
+                    addSub(src.color(c), dst.color(c), add, sub);
+                } else if (addCount == 2 && subCount == 2) {
+                    const auto add1 = updates.adds[0][c.idx()];
+                    const auto add2 = updates.adds[1][c.idx()];
+                    const auto sub1 = updates.subs[0][c.idx()];
+                    const auto sub2 = updates.subs[1][c.idx()];
+                    addAddSubSub(src.color(c), dst.color(c), add1, add2, sub1, sub2);
+                } else {
+                    fmt::println(stderr, "??");
+                    assert(false);
+                    std::terminate();
+                }
             }
         }
     } // namespace
 
+    void Accumulator::activate(Color c, u32 feature) {
+        auto& acc = color(c);
+        for (u32 i = 0; i < kL1Size; ++i) {
+            acc[i] += s_network.ftWeights[feature][i];
+        }
+    }
+
     void Accumulator::activate(u32 blackFeature, u32 whiteFeature) {
+        auto& black = this->black();
+        auto& white = this->white();
+
         for (u32 i = 0; i < kL1Size; ++i) {
             black[i] += s_network.ftWeights[blackFeature][i];
         }
@@ -127,32 +142,27 @@ namespace stoat::eval::nnue {
         }
     }
 
-    void Accumulator::deactivate(u32 blackFeature, u32 whiteFeature) {
-        for (u32 i = 0; i < kL1Size; ++i) {
-            black[i] -= s_network.ftWeights[blackFeature][i];
-        }
+    void Accumulator::reset(const Position& pos, Color c) {
+        std::ranges::copy(s_network.ftBiases, color(c).begin());
 
-        for (u32 i = 0; i < kL1Size; ++i) {
-            white[i] -= s_network.ftWeights[whiteFeature][i];
-        }
-    }
-
-    void Accumulator::reset(const Position& pos) {
-        std::ranges::copy(s_network.ftBiases, black.begin());
-        std::ranges::copy(s_network.ftBiases, white.begin());
+        const auto kings = pos.kings();
 
         auto occ = pos.occupancy();
         while (!occ.empty()) {
             const auto sq = occ.popLsb();
             const auto piece = pos.pieceOn(sq);
 
-            const auto blackFeature = psqtFeatureIndex(Colors::kBlack, piece, sq);
-            const auto whiteFeature = psqtFeatureIndex(Colors::kWhite, piece, sq);
-            activate(blackFeature, whiteFeature);
+            const auto feature = psqtFeatureIndex(c, kings, piece, sq);
+            activate(c, feature);
         }
 
-        const auto activateHand = [&](Color c) {
-            const auto& hand = pos.hand(c);
+        const auto activateHand = [&](Color handColor) {
+            const auto& hand = pos.hand(handColor);
+
+            if (hand.empty()) {
+                return;
+            }
+
             for (const auto pt :
                  {PieceTypes::kPawn,
                   PieceTypes::kLance,
@@ -163,18 +173,67 @@ namespace stoat::eval::nnue {
                   PieceTypes::kRook})
             {
                 const auto count = hand.count(pt);
-                if (count > 0) {
-                    for (u32 featureCount = 0; featureCount < count; ++featureCount) {
-                        const auto blackFeature = handFeatureIndex(Colors::kBlack, pt, c, featureCount);
-                        const auto whiteFeature = handFeatureIndex(Colors::kWhite, pt, c, featureCount);
-                        activate(blackFeature, whiteFeature);
-                    }
+                for (u32 featureCount = 0; featureCount < count; ++featureCount) {
+                    const auto feature = handFeatureIndex(c, pt, handColor, featureCount);
+                    activate(c, feature);
                 }
             }
         };
 
         activateHand(Colors::kBlack);
         activateHand(Colors::kWhite);
+    }
+
+    void Accumulator::reset(const Position& pos) {
+        std::ranges::copy(s_network.ftBiases, black().begin());
+        std::ranges::copy(s_network.ftBiases, white().begin());
+
+        const auto kings = pos.kings();
+
+        auto occ = pos.occupancy();
+        while (!occ.empty()) {
+            const auto sq = occ.popLsb();
+            const auto piece = pos.pieceOn(sq);
+
+            const auto blackFeature = psqtFeatureIndex(Colors::kBlack, kings, piece, sq);
+            const auto whiteFeature = psqtFeatureIndex(Colors::kWhite, kings, piece, sq);
+            activate(blackFeature, whiteFeature);
+        }
+
+        const auto activateHand = [&](Color c) {
+            const auto& hand = pos.hand(c);
+
+            if (hand.empty()) {
+                return;
+            }
+
+            for (const auto pt :
+                 {PieceTypes::kPawn,
+                  PieceTypes::kLance,
+                  PieceTypes::kKnight,
+                  PieceTypes::kSilver,
+                  PieceTypes::kGold,
+                  PieceTypes::kBishop,
+                  PieceTypes::kRook})
+            {
+                const auto count = hand.count(pt);
+                for (u32 featureCount = 0; featureCount < count; ++featureCount) {
+                    const auto blackFeature = handFeatureIndex(Colors::kBlack, pt, c, featureCount);
+                    const auto whiteFeature = handFeatureIndex(Colors::kWhite, pt, c, featureCount);
+                    activate(blackFeature, whiteFeature);
+                }
+            }
+        };
+
+        activateHand(Colors::kBlack);
+        activateHand(Colors::kWhite);
+
+        auto copy = *this;
+
+        for (const auto c : {Colors::kBlack, Colors::kWhite}) {
+            copy.reset(pos, c);
+            assert(copy.color(c) == color(c));
+        }
     }
 
     NnueState::NnueState() {
@@ -186,10 +245,10 @@ namespace stoat::eval::nnue {
         m_curr->reset(pos);
     }
 
-    void NnueState::push(const NnueUpdates& updates) {
+    void NnueState::push(const Position& pos, const NnueUpdates& updates) {
         assert(m_curr < &m_accStacc[kMaxDepth]);
         auto next = m_curr + 1;
-        applyUpdates(updates, *m_curr, *next);
+        applyUpdates(pos, updates, *m_curr, *next);
         m_curr = next;
     }
 
@@ -198,9 +257,9 @@ namespace stoat::eval::nnue {
         --m_curr;
     }
 
-    void NnueState::applyInPlace(const NnueUpdates& updates) {
+    void NnueState::applyInPlace(const Position& pos, const NnueUpdates& updates) {
         assert(m_curr);
-        applyUpdates(updates, *m_curr, *m_curr);
+        applyUpdates(pos, updates, *m_curr, *m_curr);
     }
 
     i32 NnueState::evaluate(Color stm) const {
