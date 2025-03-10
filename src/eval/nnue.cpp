@@ -57,8 +57,8 @@ namespace stoat::eval::nnue {
                 return clipped * clipped;
             };
 
-            const std::span stmAccum = stm == Colors::kBlack ? acc.black() : acc.white();
-            const std::span nstmAccum = stm == Colors::kBlack ? acc.white() : acc.black();
+            const std::span stmAccum = acc.color(stm);
+            const std::span nstmAccum = acc.color(stm.flip());
 
             i32 out = 0;
 
