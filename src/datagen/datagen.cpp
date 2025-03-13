@@ -206,6 +206,10 @@ namespace stoat::datagen {
                 auto pos = getStartpos(rng, keyHistory, format);
                 thread.nnueState.reset(pos);
 
+                u32 winPlies{};
+                u32 lossPlies{};
+                u32 drawPlies{};
+
                 std::optional<format::Outcome> outcome{};
 
                 while (!outcome) {
@@ -264,6 +268,32 @@ namespace stoat::datagen {
                         outcome =
                             pos.stm() == Colors::kBlack ? format::Outcome::kBlackWin : format::Outcome::kBlackLoss;
                         break;
+                    }
+
+                    if (blackScore >= 1000) {
+                        ++winPlies;
+                        lossPlies = 0;
+                        drawPlies = 0;
+                    } else if (blackScore <= -1000) {
+                        winPlies = 0;
+                        ++lossPlies;
+                        drawPlies = 0;
+                    } else if (pos.moveCount() >= 40 && std::abs(blackScore) <= 10) {
+                        winPlies = 0;
+                        lossPlies = 0;
+                        ++drawPlies;
+                    } else {
+                        winPlies = 0;
+                        lossPlies = 0;
+                        drawPlies = 0;
+                    }
+
+                    if (winPlies >= 6) {
+                        outcome = format::Outcome::kBlackWin;
+                    } else if (lossPlies >= 6) {
+                        outcome = format::Outcome::kBlackLoss;
+                    } else if (drawPlies >= 10) {
+                        outcome = format::Outcome::kDraw;
                     }
 
                     format.push(move, blackScore);
