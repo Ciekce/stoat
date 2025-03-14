@@ -464,21 +464,24 @@ namespace stoat {
         const auto* parent = kRootNode ? nullptr : &thread.stack[ply - 1];
 
         tt::ProbedEntry ttEntry{};
-        const bool ttHit = m_ttable.probe(ttEntry, pos.key(), ply);
 
-        if (!kPvNode && ttEntry.depth >= depth
-            && (ttEntry.flag == tt::Flag::kExact                                   //
-                || ttEntry.flag == tt::Flag::kUpperBound && ttEntry.score <= alpha //
-                || ttEntry.flag == tt::Flag::kLowerBound && ttEntry.score >= beta))
-        {
-            return ttEntry.score;
+        if (!curr.excluded) {
+            const bool ttHit = m_ttable.probe(ttEntry, pos.key(), ply);
+
+            if (!kPvNode && ttEntry.depth >= depth
+                && (ttEntry.flag == tt::Flag::kExact                                   //
+                    || ttEntry.flag == tt::Flag::kUpperBound && ttEntry.score <= alpha //
+                    || ttEntry.flag == tt::Flag::kLowerBound && ttEntry.score >= beta))
+            {
+                return ttEntry.score;
+            }
+
+            if (depth >= 3 && !ttEntry.move) {
+                --depth;
+            }
+
+            curr.staticEval = pos.isInCheck() ? kScoreNone : eval::staticEval(pos, thread.nnueState);
         }
-
-        if (depth >= 3 && !ttEntry.move) {
-            --depth;
-        }
-
-        curr.staticEval = pos.isInCheck() ? kScoreNone : eval::staticEval(pos, thread.nnueState);
 
         const bool improving = [&] {
             if (pos.isInCheck()) {
@@ -493,7 +496,7 @@ namespace stoat {
             return true;
         }();
 
-        if (!kPvNode && !pos.isInCheck()) {
+        if (!kPvNode && !pos.isInCheck() && !curr.excluded) {
             if (depth <= 4 && curr.staticEval - 80 * (depth - improving) >= beta) {
                 return curr.staticEval;
             }
@@ -530,6 +533,10 @@ namespace stoat {
 
         while (const auto move = generator.next()) {
             assert(pos.isPseudolegal(move));
+
+            if (move == curr.excluded) {
+                continue;
+            }
 
             if constexpr (kRootNode) {
                 if (!isLegalRootMove(move)) {
@@ -570,6 +577,12 @@ namespace stoat {
             const auto [newPos, guard] = thread.applyMove(ply, pos, move);
             const auto sennichite = newPos.testSennichite(m_cuteChessWorkaround, thread.keyHistory);
 
+            const bool givesCheck = newPos.isInCheck();
+
+            auto newDepth = depth - 1;
+
+            i32 extension{};
+
             Score score;
 
             if (sennichite == SennichiteStatus::kWin) {
@@ -578,37 +591,56 @@ namespace stoat {
                 continue;
             } else if (sennichite == SennichiteStatus::kDraw) {
                 score = drawScore(thread.loadNodes());
+                goto skipSearch;
             } else if (pos.isEnteringKingsWin()) {
                 score = kScoreMate - ply - 1;
-            } else {
-                const bool givesCheck = newPos.isInCheck();
-                const auto newDepth = depth + givesCheck - 1;
-
-                if (depth >= 2 && legalMoves >= 3 + 2 * kRootNode && !givesCheck
-                    && generator.stage() >= MovegenStage::kNonCaptures)
-                {
-                    auto r = baseLmr;
-
-                    r += !kPvNode;
-                    r -= pos.isInCheck();
-                    r -= move.isDrop() && Square::chebyshev(move.to(), pos.kingSq(pos.stm().flip())) < 3;
-                    r += !improving;
-
-                    const auto reduced = std::min(std::max(newDepth - r, 1), newDepth - 1);
-                    score = -search(thread, newPos, curr.pv, reduced, ply + 1, -alpha - 1, -alpha);
-
-                    if (score > alpha && reduced < newDepth) {
-                        score = -search(thread, newPos, curr.pv, newDepth, ply + 1, -alpha - 1, -alpha);
-                    }
-                } else if (!kPvNode || legalMoves > 1) {
-                    score = -search(thread, newPos, curr.pv, newDepth, ply + 1, -alpha - 1, -alpha);
-                }
-
-                if (kPvNode && (legalMoves == 1 || score > alpha)) {
-                    score = -search<true>(thread, newPos, curr.pv, newDepth, ply + 1, -beta, -alpha);
-                }
+                goto skipSearch;
             }
 
+            if (!kRootNode && depth >= 7 && ply < thread.rootDepth * 2 && move == ttEntry.move && !curr.excluded
+                && ttEntry.depth >= depth - 3 && ttEntry.flag != tt::Flag::kUpperBound)
+            {
+                const auto sBeta = std::max(-kScoreInf + 1, ttEntry.score - depth * 2);
+                const auto sDepth = (depth - 1) / 2;
+
+                curr.excluded = move;
+                score = search(thread, pos, curr.pv, sDepth, ply, sBeta - 1, sBeta);
+                curr.excluded = kNullMove;
+
+                if (score < sBeta) {
+                    extension = 1;
+                }
+            } else if (givesCheck) {
+                extension = 1;
+            }
+
+            newDepth += extension;
+
+            if (depth >= 2 && legalMoves >= 3 + 2 * kRootNode && !givesCheck
+                && generator.stage() >= MovegenStage::kNonCaptures)
+            {
+                auto r = baseLmr;
+
+                r += !kPvNode;
+                r -= pos.isInCheck();
+                r -= move.isDrop() && Square::chebyshev(move.to(), pos.kingSq(pos.stm().flip())) < 3;
+                r += !improving;
+
+                const auto reduced = std::min(std::max(newDepth - r, 1), newDepth - 1);
+                score = -search(thread, newPos, curr.pv, reduced, ply + 1, -alpha - 1, -alpha);
+
+                if (score > alpha && reduced < newDepth) {
+                    score = -search(thread, newPos, curr.pv, newDepth, ply + 1, -alpha - 1, -alpha);
+                }
+            } else if (!kPvNode || legalMoves > 1) {
+                score = -search(thread, newPos, curr.pv, newDepth, ply + 1, -alpha - 1, -alpha);
+            }
+
+            if (kPvNode && (legalMoves == 1 || score > alpha)) {
+                score = -search<true>(thread, newPos, curr.pv, newDepth, ply + 1, -beta, -alpha);
+            }
+
+        skipSearch:
             if (hasStopped()) {
                 return 0;
             }
@@ -657,7 +689,9 @@ namespace stoat {
             }
         }
 
-        m_ttable.put(pos.key(), bestScore, bestMove, depth, ply, ttFlag);
+        if (!curr.excluded) {
+            m_ttable.put(pos.key(), bestScore, bestMove, depth, ply, ttFlag);
+        }
 
         return bestScore;
     }
