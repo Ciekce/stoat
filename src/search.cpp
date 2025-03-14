@@ -609,7 +609,11 @@ namespace stoat {
                 curr.excluded = kNullMove;
 
                 if (score < sBeta) {
-                    extension = 1;
+                    if (!kPvNode && score < sBeta - 16) {
+                        extension = 2;
+                    } else {
+                        extension = 1;
+                    }
                 }
             } else if (givesCheck) {
                 extension = 1;
