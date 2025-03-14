@@ -480,20 +480,20 @@ namespace stoat {
 
         curr.staticEval = pos.isInCheck() ? kScoreNone : eval::staticEval(pos, thread.nnueState);
 
-        if (!kPvNode && !pos.isInCheck()) {
-            const bool improving = [&] {
-                if (pos.isInCheck()) {
-                    return false;
-                }
-                if (ply > 1 && thread.stack[ply - 2].staticEval != kScoreNone) {
-                    return curr.staticEval > thread.stack[ply - 2].staticEval;
-                }
-                if (ply > 3 && thread.stack[ply - 4].staticEval != kScoreNone) {
-                    return curr.staticEval > thread.stack[ply - 4].staticEval;
-                }
-                return true;
-            }();
+        const bool improving = [&] {
+            if (pos.isInCheck()) {
+                return false;
+            }
+            if (ply > 1 && thread.stack[ply - 2].staticEval != kScoreNone) {
+                return curr.staticEval > thread.stack[ply - 2].staticEval;
+            }
+            if (ply > 3 && thread.stack[ply - 4].staticEval != kScoreNone) {
+                return curr.staticEval > thread.stack[ply - 4].staticEval;
+            }
+            return true;
+        }();
 
+        if (!kPvNode && !pos.isInCheck()) {
             if (depth <= 4 && curr.staticEval - 80 * (depth - improving) >= beta) {
                 return curr.staticEval;
             }
@@ -592,6 +592,7 @@ namespace stoat {
                     r += !kPvNode;
                     r -= pos.isInCheck();
                     r -= move.isDrop() && Square::chebyshev(move.to(), pos.kingSq(pos.stm().flip())) < 3;
+                    r += !improving;
 
                     const auto reduced = std::min(std::max(newDepth - r, 1), newDepth - 1);
                     score = -search(thread, newPos, curr.pv, reduced, ply + 1, -alpha - 1, -alpha);
