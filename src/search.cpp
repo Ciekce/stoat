@@ -614,6 +614,8 @@ namespace stoat {
                     } else {
                         extension = 1;
                     }
+                } else if (ttEntry.score >= beta) {
+                    extension = -1;
                 }
             } else if (givesCheck) {
                 extension = 1;
