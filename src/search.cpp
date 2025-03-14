@@ -464,9 +464,10 @@ namespace stoat {
         const auto* parent = kRootNode ? nullptr : &thread.stack[ply - 1];
 
         tt::ProbedEntry ttEntry{};
+        bool ttHit = false;
 
         if (!curr.excluded) {
-            const bool ttHit = m_ttable.probe(ttEntry, pos.key(), ply);
+            ttHit = m_ttable.probe(ttEntry, pos.key(), ply);
 
             if (!kPvNode && ttEntry.depth >= depth
                 && (ttEntry.flag == tt::Flag::kExact                                   //
