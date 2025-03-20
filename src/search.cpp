@@ -744,9 +744,12 @@ namespace stoat {
             }
         }
 
+        tt::ProbedEntry ttEntry{};
+        m_ttable.probe(ttEntry, pos.key(), ply);
+
         auto bestScore = staticEval;
 
-        auto generator = MoveGenerator::qsearch(pos, thread.history);
+        auto generator = MoveGenerator::qsearch(pos, ttEntry.move, thread.history);
 
         while (const auto move = generator.next()) {
             assert(pos.isPseudolegal(move));

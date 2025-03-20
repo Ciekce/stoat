@@ -71,6 +71,16 @@ namespace stoat {
                 return kNullMove;
             }
 
+            case MovegenStage::kQsearchTtMove: {
+                ++m_stage;
+
+                if (m_ttMove && m_pos.isPseudolegal(m_ttMove)) {
+                    return m_ttMove;
+                }
+
+                [[fallthrough]];
+            }
+
             case MovegenStage::kQsearchGenerateCaptures: {
                 movegen::generateCaptures(m_moves, m_pos);
                 m_end = m_moves.size();
@@ -80,12 +90,22 @@ namespace stoat {
             }
 
             case MovegenStage::kQsearchCaptures: {
-                if (const auto move = selectNext([](Move) { return true; })) {
+                if (const auto move = selectNext([this](Move move) { return move != m_ttMove; })) {
                     return move;
                 }
 
                 m_stage = MovegenStage::kEnd;
                 return kNullMove;
+            }
+
+            case MovegenStage::kQsearchEvasionsTtMove: {
+                ++m_stage;
+
+                if (m_ttMove && m_pos.isPseudolegal(m_ttMove)) {
+                    return m_ttMove;
+                }
+
+                [[fallthrough]];
             }
 
             case MovegenStage::kQsearchEvasionsGenerateCaptures: {
@@ -97,7 +117,7 @@ namespace stoat {
             }
 
             case MovegenStage::kQsearchEvasionsCaptures: {
-                if (const auto move = selectNext([](Move) { return true; })) {
+                if (const auto move = selectNext([this](Move move) { return move != m_ttMove; })) {
                     return move;
                 }
 
@@ -137,10 +157,9 @@ namespace stoat {
         return MoveGenerator{MovegenStage::kTtMove, pos, ttMove, history};
     }
 
-    MoveGenerator MoveGenerator::qsearch(const Position& pos, const HistoryTables& history) {
-        const auto initialStage =
-            pos.isInCheck() ? MovegenStage::kQsearchEvasionsGenerateCaptures : MovegenStage::kQsearchGenerateCaptures;
-        return MoveGenerator{initialStage, pos, kNullMove, history};
+    MoveGenerator MoveGenerator::qsearch(const Position& pos, Move ttMove, const HistoryTables& history) {
+        const auto initialStage = pos.isInCheck() ? MovegenStage::kQsearchEvasionsTtMove : MovegenStage::kQsearchTtMove;
+        return MoveGenerator{initialStage, pos, ttMove, history};
     }
 
     MoveGenerator::MoveGenerator(

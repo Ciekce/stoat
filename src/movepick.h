@@ -34,8 +34,10 @@ namespace stoat {
         kCaptures,
         kGenerateNonCaptures,
         kNonCaptures,
+        kQsearchTtMove,
         kQsearchGenerateCaptures,
         kQsearchCaptures,
+        kQsearchEvasionsTtMove,
         kQsearchEvasionsGenerateCaptures,
         kQsearchEvasionsCaptures,
         kQsearchEvasionsGenerateNonCaptures,
@@ -65,7 +67,7 @@ namespace stoat {
         }
 
         [[nodiscard]] static MoveGenerator main(const Position& pos, Move ttMove, const HistoryTables& history);
-        [[nodiscard]] static MoveGenerator qsearch(const Position& pos, const HistoryTables& history);
+        [[nodiscard]] static MoveGenerator qsearch(const Position& pos, Move ttMove, const HistoryTables& history);
 
     private:
         MoveGenerator(MovegenStage initialStage, const Position& pos, Move ttMove, const HistoryTables& history);
