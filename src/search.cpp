@@ -597,10 +597,6 @@ namespace stoat {
 
             const bool givesCheck = newPos.isInCheck();
 
-            if (extension == 0 && givesCheck) {
-                extension = 1;
-            }
-
             auto newDepth = depth - 1;
 
             Score score;
@@ -617,7 +613,7 @@ namespace stoat {
                 goto skipSearch;
             }
 
-            if (givesCheck) {
+            if (extension == 0 && givesCheck) {
                 extension = 1;
             }
 
