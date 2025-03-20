@@ -580,7 +580,7 @@ namespace stoat {
             if (!kRootNode && depth >= 7 && ply < thread.rootDepth * 2 && move == ttEntry.move && !curr.excluded
                 && ttEntry.depth >= depth - 3 && ttEntry.flag != tt::Flag::kUpperBound)
             {
-                const auto sBeta = std::max(-kScoreInf + 1, ttEntry.score - depth * 2);
+                const auto sBeta = std::max(-kScoreInf + 1, ttEntry.score - depth * 4 / 3);
                 const auto sDepth = (depth - 1) / 2;
 
                 curr.excluded = move;
