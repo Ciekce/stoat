@@ -728,6 +728,18 @@ namespace stoat {
             return pos.isInCheck() ? 0 : eval::staticEval(pos, thread.nnueState);
         }
 
+        if constexpr (!kPvNode) {
+            tt::ProbedEntry ttEntry{};
+            m_ttable.probe(ttEntry, pos.key(), ply);
+
+            if (ttEntry.flag == tt::Flag::kExact                                   //
+                || ttEntry.flag == tt::Flag::kUpperBound && ttEntry.score <= alpha //
+                || ttEntry.flag == tt::Flag::kLowerBound && ttEntry.score >= beta)
+            {
+                return ttEntry.score;
+            }
+        }
+
         Score staticEval;
 
         if (pos.isInCheck()) {
