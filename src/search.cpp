@@ -728,23 +728,35 @@ namespace stoat {
             return pos.isInCheck() ? 0 : eval::staticEval(pos, thread.nnueState);
         }
 
-        Score staticEval;
+        Score staticEval, eval;
 
         if (pos.isInCheck()) {
-            staticEval = -kScoreMate + ply;
+            eval = staticEval = -kScoreMate + ply;
         } else {
             staticEval = eval::staticEval(pos, thread.nnueState);
 
-            if (staticEval >= beta) {
-                return staticEval;
+            tt::ProbedEntry ttEntry{};
+            m_ttable.probe(ttEntry, pos.key(), ply);
+
+            if (ttEntry.flag == tt::Flag::kExact                                       //
+                || ttEntry.flag == tt::Flag::kUpperBound && ttEntry.score < staticEval //
+                || ttEntry.flag == tt::Flag::kLowerBound && ttEntry.score > staticEval)
+            {
+                eval = ttEntry.score;
+            } else {
+                eval = staticEval;
             }
 
-            if (staticEval > alpha) {
-                alpha = staticEval;
+            if (eval >= beta) {
+                return eval;
+            }
+
+            if (eval > alpha) {
+                alpha = eval;
             }
         }
 
-        auto bestScore = staticEval;
+        auto bestScore = eval;
 
         auto generator = MoveGenerator::qsearch(pos, thread.history);
 
