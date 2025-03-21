@@ -559,19 +559,8 @@ namespace stoat {
                     generator.skipNonCaptures();
                 }
 
-                const auto seeThreshold = [&] {
-                    if (pos.isCapture(move)) {
-                        return -100 * depth * depth;
-                    }
-
-                    if (move.isDrop() && pos.dropGivesCheck(move)) {
-                        return -100 * depth * depth;
-                    }
-
-                    return -20 * depth * depth;
-                }();
-
-                if (!see::see(pos, move, seeThreshold)) {
+                const auto seeThreshold = pos.isCapture(move) ? -100 * depth * depth : -20 * depth * depth;
+                if ((!move.isDrop() || !pos.dropGivesCheck(move)) && !see::see(pos, move, seeThreshold)) {
                     continue;
                 }
 
