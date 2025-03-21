@@ -260,6 +260,44 @@ namespace stoat {
         return newPos;
     }
 
+    u64 Position::keyAfter(Move move) const {
+        auto key = m_keys.all ^ keys::stm();
+
+        const auto& hand = this->hand(m_stm);
+
+        if (move.isDrop()) {
+            key ^= keys::pieceSquare(move.dropPiece().withColor(m_stm), move.to());
+
+            const auto count = hand.count(move.dropPiece());
+            key ^= keys::pieceInHand(m_stm, move.dropPiece(), count);
+            key ^= keys::pieceInHand(m_stm, move.dropPiece(), count - 1);
+
+            return key;
+        }
+
+        const auto moving = pieceOn(move.from());
+        const auto captured = pieceOn(move.to());
+
+        key ^= keys::pieceSquare(moving, move.from());
+
+        if (move.isPromo()) {
+            key ^= keys::pieceSquare(moving.promoted(), move.to());
+        } else {
+            key ^= keys::pieceSquare(moving, move.to());
+        }
+
+        if (captured) {
+            key ^= keys::pieceSquare(captured, move.to());
+
+            const auto handPt = captured.type().unpromoted();
+            const auto count = hand.count(handPt);
+            key ^= keys::pieceInHand(m_stm, handPt, count);
+            key ^= keys::pieceInHand(m_stm, handPt, count + 1);
+        }
+
+        return key;
+    }
+
     SennichiteStatus Position::testSennichite(bool cuteChessWorkaround, std::span<const u64> keyHistory, i32 limit)
         const {
         const auto end = std::max(0, static_cast<i32>(keyHistory.size()) - limit - 1);

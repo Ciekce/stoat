@@ -57,6 +57,10 @@ namespace stoat::tt {
 
         [[nodiscard]] u32 fullPermille() const;
 
+        inline void prefetch(u64 key) {
+            __builtin_prefetch(&m_entries[index(key)]);
+        }
+
     private:
         struct alignas(8) Entry {
             u16 key;

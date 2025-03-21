@@ -175,6 +175,8 @@ namespace stoat {
             return m_keys.all;
         }
 
+        [[nodiscard]] u64 keyAfter(Move move) const;
+
         [[nodiscard]] inline bool isInCheck() const {
             return !m_checkers.empty();
         }

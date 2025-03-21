@@ -596,6 +596,8 @@ namespace stoat {
                 }
             }
 
+            m_ttable.prefetch(pos.keyAfter(move));
+
             const auto [newPos, guard] = thread.applyMove(ply, pos, move);
             const auto sennichite = newPos.testSennichite(m_cuteChessWorkaround, thread.keyHistory);
 
