@@ -74,6 +74,10 @@ namespace stoat {
             return kDropPieces[get(kDropPieceShift, kPieceMask)];
         }
 
+        [[nodiscard]] constexpr usize dropPieceIdx() const {
+            return get(kDropPieceShift, kPieceMask);
+        }
+
         [[nodiscard]] constexpr bool isNull() const {
             return m_move == 0;
         }

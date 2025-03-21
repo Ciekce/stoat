@@ -181,6 +181,8 @@ namespace stoat {
             return !m_checkers.empty();
         }
 
+        [[nodiscard]] bool dropGivesCheck(Move move) const;
+
         [[nodiscard]] inline Bitboard checkers() const {
             return m_checkers;
         }
@@ -256,6 +258,8 @@ namespace stoat {
         std::array<u16, Colors::kCount> m_consecutiveChecks{};
 
         PositionKeys m_keys{};
+
+        std::array<Bitboard, 7> m_checkZones{};
 
         Bitboard m_checkers{};
         Bitboard m_pinned{};

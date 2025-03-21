@@ -298,6 +298,14 @@ namespace stoat {
         return key;
     }
 
+    bool Position::dropGivesCheck(Move move) const {
+        assert(move);
+        assert(move.isDrop());
+
+        const auto checkZone = m_checkZones[move.dropPieceIdx()];
+        return checkZone.getSquare(move.to());
+    }
+
     SennichiteStatus Position::testSennichite(bool cuteChessWorkaround, std::span<const u64> keyHistory, i32 limit)
         const {
         const auto end = std::max(0, static_cast<i32>(keyHistory.size()) - limit - 1);
@@ -889,6 +897,9 @@ namespace stoat {
         m_pinned = Bitboards::kEmpty;
 
         const auto stmKing = kingSq(stm);
+        const auto nstmKing = kingSq(nstm);
+
+        const auto occ = occupancy();
 
         const auto stmOcc = colorBb(stm);
         const auto nstmOcc = colorBb(nstm);
@@ -907,6 +918,20 @@ namespace stoat {
             if (maybePinned.one()) {
                 m_pinned |= maybePinned;
             }
+        }
+
+        static constexpr std::array kDropPieces = {
+            PieceTypes::kPawn,
+            PieceTypes::kLance,
+            PieceTypes::kKnight,
+            PieceTypes::kSilver,
+            PieceTypes::kGold,
+            PieceTypes::kBishop,
+            PieceTypes::kRook
+        };
+
+        for (usize i = 0; i < kDropPieces.size(); ++i) {
+            m_checkZones[i] = attacks::pieceAttacks(kDropPieces[i], nstmKing, nstm, occ);
         }
     }
 
