@@ -100,7 +100,8 @@ namespace stoat {
     enum class SennichiteStatus {
         kNone = 0,
         kDraw,
-        kWin, // perpetual check by opponent
+        kWin,  // perpetual check by opponent
+        kLose, // perpetual check
     };
 
     namespace eval::nnue {

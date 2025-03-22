@@ -239,9 +239,9 @@ namespace stoat {
         newPos.updateAttacks();
 
         if (newPos.isInCheck()) {
-            ++newPos.m_consecutiveChecks[newPos.stm().idx()];
+            ++newPos.m_consecutiveChecks[newPos.stm().flip().idx()];
         } else {
-            newPos.m_consecutiveChecks[newPos.stm().idx()] = 0;
+            newPos.m_consecutiveChecks[newPos.stm().flip().idx()] = 0;
         }
 
         return newPos;
@@ -300,12 +300,12 @@ namespace stoat {
 
     SennichiteStatus Position::testSennichite(bool cuteChessWorkaround, std::span<const u64> keyHistory, i32 limit)
         const {
-        const auto end = std::max(0, static_cast<i32>(keyHistory.size()) - limit - 1);
+        const auto end = std::min(static_cast<i32>(keyHistory.size()), limit);
 
         i32 repetitions = 1;
 
-        for (i32 i = static_cast<i32>(keyHistory.size()) - 4; i >= end; i -= 2) {
-            if (keyHistory[i] == key()) {
+        for (i32 i = 4; i <= end; i += 2) {
+            if (keyHistory[keyHistory.size() - i] == key()) {
                 --repetitions;
                 if (repetitions == 0) {
                     // Older cutechess versions do not handle perpetuals
@@ -313,7 +313,13 @@ namespace stoat {
                     if (cuteChessWorkaround) {
                         return isInCheck() ? SennichiteStatus::kWin : SennichiteStatus::kDraw;
                     } else {
-                        return m_consecutiveChecks[stm().idx()] >= 2 ? SennichiteStatus::kWin : SennichiteStatus::kDraw;
+                        if (i / 2 <= m_consecutiveChecks[stm().idx()]) {
+                            return SennichiteStatus::kLose;
+                        } else if (i / 2 <= m_consecutiveChecks[stm().flip().idx()]) {
+                            return SennichiteStatus::kWin;
+                        } else {
+                            return SennichiteStatus::kDraw;
+                        }
                     }
                 }
             }

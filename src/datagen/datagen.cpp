@@ -240,7 +240,7 @@ namespace stoat::datagen {
                     if (sennichite == SennichiteStatus::kDraw) {
                         outcome = format::Outcome::kDraw;
                         break;
-                    } else if (sennichite == SennichiteStatus::kWin) {
+                    } else if (sennichite == SennichiteStatus::kWin || sennichite == SennichiteStatus::kLose) {
                         const std::scoped_lock lock{s_printMutex};
 
                         auto& errStream = getErrStream(outDir);

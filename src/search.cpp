@@ -610,10 +610,13 @@ namespace stoat {
             Score score;
 
             if (sennichite == SennichiteStatus::kWin) {
-                // illegal perpetual
                 --legalMoves;
                 continue;
-            } else if (sennichite == SennichiteStatus::kDraw) {
+            } else if (sennichite == SennichiteStatus::kLose) {
+                score = kScoreMate - ply - 1;
+                goto skipSearch;
+            }
+            else if (sennichite == SennichiteStatus::kDraw) {
                 score = drawScore(thread.loadNodes());
                 goto skipSearch;
             } else if (pos.isEnteringKingsWin()) {
@@ -776,8 +779,9 @@ namespace stoat {
             Score score;
 
             if (sennichite == SennichiteStatus::kWin) {
-                // illegal perpetual
                 continue;
+            } else if (sennichite == SennichiteStatus::kLose) {
+                score = kScoreMate - ply - 1;
             } else if (sennichite == SennichiteStatus::kDraw) {
                 score = drawScore(thread.loadNodes());
             } else {
