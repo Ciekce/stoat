@@ -47,8 +47,8 @@ namespace stoat {
 
         // [depth][move index]
         const auto s_lmrTable = [] {
-            constexpr f64 kBase = 0.2;
-            constexpr f64 kDivisor = 3.0;
+            constexpr f64 kBase = 0.5;
+            constexpr f64 kDivisor = 2.5;
 
             util::MultiArray<i32, kMaxDepth, kLmrTableMoves> reductions{};
 
