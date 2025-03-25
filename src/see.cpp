@@ -34,11 +34,6 @@ namespace stoat::see {
             const auto captured = pos.pieceOn(move.to());
             auto gain = pieceValue(captured.typeOrNone());
 
-            if (move.isPromo()) {
-                const auto moving = pos.pieceOn(move.from());
-                gain += pieceValue(moving.type().promoted()) - pieceValue(moving.type());
-            }
-
             return gain;
         }
 
@@ -70,17 +65,17 @@ namespace stoat::see {
 
         [[nodiscard]] constexpr bool canMoveDiagonally(PieceType pt) {
             assert(pt);
-            return pt == PieceTypes::kPromotedLance || pt == PieceTypes::kPromotedKnight || pt == PieceTypes::kSilver
-                || pt == PieceTypes::kPromotedSilver || pt == PieceTypes::kGold || pt == PieceTypes::kBishop
-                || pt == PieceTypes::kPromotedBishop || pt == PieceTypes::kPromotedRook;
+            return pt == PieceTypes::kPromotedPawn || pt == PieceTypes::kPromotedLance || pt == PieceTypes::kPromotedKnight
+                || pt == PieceTypes::kSilver || pt == PieceTypes::kPromotedSilver || pt == PieceTypes::kGold
+                || pt == PieceTypes::kBishop || pt == PieceTypes::kPromotedBishop || pt == PieceTypes::kPromotedRook;
         }
 
         [[nodiscard]] constexpr bool canMoveOrthogonally(PieceType pt) {
             assert(pt);
-            return pt == PieceTypes::kPawn || pt == PieceTypes::kLance || pt == PieceTypes::kPromotedLance
-                || pt == PieceTypes::kPromotedKnight || pt == PieceTypes::kSilver || pt == PieceTypes::kPromotedSilver
-                || pt == PieceTypes::kGold || pt == PieceTypes::kRook || pt == PieceTypes::kPromotedBishop
-                || pt == PieceTypes::kPromotedRook;
+            return pt == PieceTypes::kPawn || pt == PieceTypes::kPromotedPawn || pt == PieceTypes::kLance
+                || pt == PieceTypes::kPromotedLance || pt == PieceTypes::kPromotedKnight || pt == PieceTypes::kSilver
+                || pt == PieceTypes::kPromotedSilver || pt == PieceTypes::kGold || pt == PieceTypes::kRook
+                || pt == PieceTypes::kPromotedBishop || pt == PieceTypes::kPromotedRook;
         }
     } // namespace
 
@@ -108,6 +103,7 @@ namespace stoat::see {
             occ ^= move.from().bit();
         }
 
+        const auto lances = pos.pieceTypeBb(PieceTypes::kLance);
         const auto bishops = pos.pieceTypeBb(PieceTypes::kBishop) | pos.pieceTypeBb(PieceTypes::kPromotedBishop);
         const auto rooks = pos.pieceTypeBb(PieceTypes::kRook) | pos.pieceTypeBb(PieceTypes::kPromotedRook);
 
@@ -129,7 +125,10 @@ namespace stoat::see {
             }
 
             if (canMoveOrthogonally(next)) {
-                attackers |= attacks::rookAttacks(sq, occ) & rooks;
+                const auto rookAttacks = attacks::rookAttacks(sq, occ);
+
+                attackers |= rookAttacks & Bitboards::kFiles[sq.file()] & lances;
+                attackers |= rookAttacks & rooks;
             }
 
             attackers &= occ;
