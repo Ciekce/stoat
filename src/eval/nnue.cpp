@@ -20,6 +20,8 @@
 
 #include <algorithm>
 
+#include <immintrin.h>
+
 #ifdef _MSC_VER
     #define ST_MSVC
     #pragma push_macro("_MSC_VER")
@@ -51,21 +53,60 @@ namespace stoat::eval::nnue {
 
         const Network& s_network = *reinterpret_cast<const Network*>(g_defaultNetData);
 
+        [[nodiscard]] i32 hsum32(__m256i v) {
+            const auto high128 = _mm256_extracti128_si256(v, 1);
+            const auto low128 = _mm256_castsi256_si128(v);
+
+            const auto sum128 = _mm_add_epi32(high128, low128);
+
+            const auto high64 = _mm_unpackhi_epi64(sum128, sum128);
+            const auto sum64 = _mm_add_epi32(sum128, high64);
+
+            const auto high32 = _mm_shuffle_epi32(sum64, _MM_SHUFFLE(2, 3, 0, 1));
+            const auto sum32 = _mm_add_epi32(sum64, high32);
+
+            return _mm_cvtsi128_si32(sum32);
+        }
+
         [[nodiscard]] i32 forward(const Accumulator& acc, Color stm) {
-            const auto screlu = [](i16 v) {
-                const auto clipped = std::clamp(static_cast<i32>(v), 0, kFtQ);
-                return clipped * clipped;
-            };
+            static constexpr usize kChunkSize = sizeof(__m256i) / sizeof(i16);
+            static_assert(kL1Size % kChunkSize == 0);
 
             const std::span stmAccum = acc.color(stm);
             const std::span nstmAccum = acc.color(stm.flip());
 
-            i32 out = 0;
+            const auto zero = _mm256_setzero_si256();
+            const auto one = _mm256_set1_epi16(kFtQ);
 
-            for (u32 i = 0; i < kL1Size; ++i) {
-                out += screlu(stmAccum[i]) * s_network.l1Weights[0][i];
-                out += screlu(nstmAccum[i]) * s_network.l1Weights[1][i];
+            auto sums = zero;
+
+            for (u32 i = 0; i < kL1Size; i += kChunkSize) {
+                auto v = _mm256_load_si256(reinterpret_cast<const __m256i*>(&stmAccum[i]));
+                const auto w = _mm256_load_si256(reinterpret_cast<const __m256i*>(&s_network.l1Weights[0][i]));
+
+                v = _mm256_max_epi16(v, zero);
+                v = _mm256_min_epi16(v, one);
+
+                auto p = _mm256_mullo_epi16(v, w);
+                p = _mm256_madd_epi16(p, v);
+
+                sums = _mm256_add_epi32(sums, p);
             }
+
+            for (u32 i = 0; i < kL1Size; i += kChunkSize) {
+                auto v = _mm256_load_si256(reinterpret_cast<const __m256i*>(&nstmAccum[i]));
+                const auto w = _mm256_load_si256(reinterpret_cast<const __m256i*>(&s_network.l1Weights[1][i]));
+
+                v = _mm256_max_epi16(v, zero);
+                v = _mm256_min_epi16(v, one);
+
+                auto p = _mm256_mullo_epi16(v, w);
+                p = _mm256_madd_epi16(p, v);
+
+                sums = _mm256_add_epi32(sums, p);
+            }
+
+            auto out = hsum32(sums);
 
             out /= kFtQ;
             out += s_network.l1Bias;
