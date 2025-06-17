@@ -43,15 +43,17 @@ namespace stoat {
             return result;
         }();
 
+        constexpr usize kLmrTableMoves = 64;
+
         // [depth][move index]
         const auto s_lmrTable = [] {
             constexpr f64 kBase = 0.2;
             constexpr f64 kDivisor = 3.0;
 
-            util::MultiArray<i32, 256, 64> reductions{};
+            util::MultiArray<i32, kMaxDepth, kLmrTableMoves> reductions{};
 
-            for (i32 depth = 1; depth < 256; ++depth) {
-                for (i32 moveNumber = 1; moveNumber < 64; ++moveNumber) {
+            for (i32 depth = 1; depth < kMaxDepth; ++depth) {
+                for (i32 moveNumber = 1; moveNumber < kLmrTableMoves; ++moveNumber) {
                     const auto lnDepth = std::log(static_cast<f64>(depth));
                     const auto lnMoveNumber = std::log(static_cast<f64>(moveNumber));
 
@@ -552,10 +554,10 @@ namespace stoat {
                 continue;
             }
 
-            const auto baseLmr = s_lmrTable[depth][std::min<u32>(legalMoves, 63)];
+            const auto baseLmr = s_lmrTable[depth][std::min<u32>(legalMoves, kLmrTableMoves - 1)];
 
             if (!kRootNode && bestScore > -kScoreWin && (!kPvNode || !thread.datagen)) {
-                if (legalMoves >= kLmpTable[std::min<usize>(depth, kLmpTable.size())]) {
+                if (legalMoves >= kLmpTable[std::min<usize>(depth, kLmpTable.size() - 1)]) {
                     generator.skipNonCaptures();
                 }
 

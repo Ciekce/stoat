@@ -35,6 +35,8 @@ namespace stoat {
                 movegen::generateCaptures(m_moves, m_pos);
                 m_end = m_moves.size();
 
+                scoreCaptures();
+
                 ++m_stage;
                 [[fallthrough]];
             }
@@ -75,6 +77,8 @@ namespace stoat {
                 movegen::generateCaptures(m_moves, m_pos);
                 m_end = m_moves.size();
 
+                scoreCaptures();
+
                 ++m_stage;
                 [[fallthrough]];
             }
@@ -91,6 +95,8 @@ namespace stoat {
             case MovegenStage::kQsearchEvasionsGenerateCaptures: {
                 movegen::generateCaptures(m_moves, m_pos);
                 m_end = m_moves.size();
+
+                scoreCaptures();
 
                 ++m_stage;
                 [[fallthrough]];
@@ -150,6 +156,16 @@ namespace stoat {
         const HistoryTables& history
     ) :
             m_stage{initialStage}, m_pos{pos}, m_ttMove{ttMove}, m_history{history} {}
+
+    i32 MoveGenerator::scoreCapture(Move move) {
+        return 100 * m_pos.pieceOn(move.to()).type().raw() - m_pos.pieceOn(move.from()).type().raw();
+    }
+
+    void MoveGenerator::scoreCaptures() {
+        for (usize idx = m_idx; idx < m_end; ++idx) {
+            m_scores[idx] = scoreCapture(m_moves[idx]);
+        }
+    }
 
     i32 MoveGenerator::scoreNonCapture(Move move) {
         return m_history.nonCaptureScore(move);
