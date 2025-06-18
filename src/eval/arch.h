@@ -21,11 +21,17 @@
 #include "../types.h"
 
 namespace stoat::eval {
-    constexpr i32 kFtQ = 255;
-    constexpr i32 kL1Q = 64;
+    constexpr i32 kFtQBits = 8;
+    constexpr i32 kL1QBits = 7;
+    constexpr i32 kQBits = 6;
+
+    constexpr i32 kFtScaleBits = 7;
 
     constexpr u32 kFtSize = 2344;
+
     constexpr u32 kL1Size = 512;
+    constexpr u32 kL2Size = 16;
+    constexpr u32 kL3Size = 32;
 
     constexpr i32 kScale = 400;
 } // namespace stoat::eval
