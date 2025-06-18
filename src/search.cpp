@@ -344,7 +344,7 @@ namespace stoat {
             Score score;
 
             while (true) {
-                score = search<true, true>(thread, thread.rootPos, rootPv, depth, 0, alpha, beta);
+                score = search<true, true>(thread, thread.rootPos, rootPv, depth, 0, alpha, beta, false);
 
                 if (hasStopped()) {
                     break;
@@ -423,7 +423,8 @@ namespace stoat {
         i32 depth,
         i32 ply,
         Score alpha,
-        Score beta
+        Score beta,
+        bool expectedCutnode
     ) {
         assert(ply >= 0 && ply <= kMaxDepth);
 
@@ -431,6 +432,7 @@ namespace stoat {
         assert(!kRootNode || ply == 0);
 
         assert(kPvNode || alpha == beta - 1);
+        assert(!kPvNode || !expectedCutnode);
 
         if (hasStopped()) {
             return 0;
@@ -519,7 +521,8 @@ namespace stoat {
                 const auto r = 3 + depth / 5;
 
                 const auto [newPos, guard] = thread.applyNullMove(ply, pos);
-                const auto score = -search(thread, newPos, curr.pv, depth - r, ply + 1, -beta, -beta + 1);
+                const auto score =
+                    -search(thread, newPos, curr.pv, depth - r, ply + 1, -beta, -beta + 1, !expectedCutnode);
 
                 if (score >= beta) {
                     return score > kScoreWin ? beta : score;
@@ -590,7 +593,7 @@ namespace stoat {
                 const auto sDepth = (depth - 1) / 2;
 
                 curr.excluded = move;
-                const auto score = search(thread, pos, curr.pv, sDepth, ply, sBeta - 1, sBeta);
+                const auto score = search(thread, pos, curr.pv, sDepth, ply, sBeta - 1, sBeta, expectedCutnode);
                 curr.excluded = kNullMove;
 
                 if (score < sBeta) {
@@ -638,19 +641,20 @@ namespace stoat {
                 r -= pos.isInCheck();
                 r -= move.isDrop() && Square::chebyshev(move.to(), pos.kingSq(pos.stm().flip())) < 3;
                 r += !improving;
+                r += expectedCutnode * 2;
 
                 const auto reduced = std::min(std::max(newDepth - r, 1), newDepth - 1);
-                score = -search(thread, newPos, curr.pv, reduced, ply + 1, -alpha - 1, -alpha);
+                score = -search(thread, newPos, curr.pv, reduced, ply + 1, -alpha - 1, -alpha, true);
 
                 if (score > alpha && reduced < newDepth) {
-                    score = -search(thread, newPos, curr.pv, newDepth, ply + 1, -alpha - 1, -alpha);
+                    score = -search(thread, newPos, curr.pv, newDepth, ply + 1, -alpha - 1, -alpha, !expectedCutnode);
                 }
             } else if (!kPvNode || legalMoves > 1) {
-                score = -search(thread, newPos, curr.pv, newDepth, ply + 1, -alpha - 1, -alpha);
+                score = -search(thread, newPos, curr.pv, newDepth, ply + 1, -alpha - 1, -alpha, !expectedCutnode);
             }
 
             if (kPvNode && (legalMoves == 1 || score > alpha)) {
-                score = -search<true>(thread, newPos, curr.pv, newDepth, ply + 1, -beta, -alpha);
+                score = -search<true>(thread, newPos, curr.pv, newDepth, ply + 1, -beta, -alpha, false);
             }
 
         skipSearch:
