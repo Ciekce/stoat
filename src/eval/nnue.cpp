@@ -47,9 +47,9 @@ namespace stoat::eval::nnue {
         struct Network {
             alignas(64) util::MultiArray<i16, kFtSize, kL1Size> ftWeights;
             alignas(64) std::array<i16, kL1Size> ftBiases;
-            alignas(64) util::MultiArray<i8, kL1Size * kL2Size> l1Weights;
+            alignas(64) util::MultiArray<i8, kL1Size, kL2Size> l1Weights;
             alignas(64) std::array<i32, kL2Size> l1Biases;
-            alignas(64) util::MultiArray<i32, kL2Size * kL3Size> l2Weights;
+            alignas(64) util::MultiArray<i32, kL2Size, kL3Size> l2Weights;
             alignas(64) std::array<i32, kL3Size> l2Biases;
             alignas(64) std::array<i32, kL3Size> l3Weights;
             alignas(64) i32 l3Bias;
@@ -186,16 +186,16 @@ namespace stoat::eval::nnue {
                     auto& v = intermediate[outputIdx / kChunkSize32];
 
                     const auto w_0 = _mm256_load_si256(reinterpret_cast<const __m256i*>(
-                        &s_network.l1Weights[weightsStart + k32ChunkSize8 * (outputIdx + kL2Size * 0)]
+                        &s_network.l1Weights[inputIdx][k32ChunkSize8 * (outputIdx + kL2Size * 0)]
                     ));
                     const auto w_1 = _mm256_load_si256(reinterpret_cast<const __m256i*>(
-                        &s_network.l1Weights[weightsStart + k32ChunkSize8 * (outputIdx + kL2Size * 1)]
+                        &s_network.l1Weights[inputIdx][k32ChunkSize8 * (outputIdx + kL2Size * 1)]
                     ));
                     const auto w_2 = _mm256_load_si256(reinterpret_cast<const __m256i*>(
-                        &s_network.l1Weights[weightsStart + k32ChunkSize8 * (outputIdx + kL2Size * 2)]
+                        &s_network.l1Weights[inputIdx][k32ChunkSize8 * (outputIdx + kL2Size * 2)]
                     ));
                     const auto w_3 = _mm256_load_si256(reinterpret_cast<const __m256i*>(
-                        &s_network.l1Weights[weightsStart + k32ChunkSize8 * (outputIdx + kL2Size * 3)]
+                        &s_network.l1Weights[inputIdx][k32ChunkSize8 * (outputIdx + kL2Size * 3)]
                     ));
 
                     v[0] = dpbusd(v[0], i_0, w_0);
@@ -228,23 +228,13 @@ namespace stoat::eval::nnue {
             std::ranges::copy(s_network.l2Biases, l2Out.begin());
 
             for (usize inputIdx = 0; inputIdx < kL2Size; ++inputIdx) {
-                const auto weightsStart = inputIdx * kL3Size;
-
                 const auto input = _mm256_set1_epi32(l1Out[inputIdx]);
 
                 for (usize outputIdx = 0; outputIdx < kL3Size; outputIdx += kChunkSize32 * 4) {
-                    const auto w_0 = _mm256_load_si256(reinterpret_cast<const __m256i*>(
-                        &s_network.l2Weights[weightsStart + outputIdx + kChunkSize32 * 0]
-                    ));
-                    const auto w_1 = _mm256_load_si256(reinterpret_cast<const __m256i*>(
-                        &s_network.l2Weights[weightsStart + outputIdx + kChunkSize32 * 1]
-                    ));
-                    const auto w_2 = _mm256_load_si256(reinterpret_cast<const __m256i*>(
-                        &s_network.l2Weights[weightsStart + outputIdx + kChunkSize32 * 2]
-                    ));
-                    const auto w_3 = _mm256_load_si256(reinterpret_cast<const __m256i*>(
-                        &s_network.l2Weights[weightsStart + outputIdx + kChunkSize32 * 3]
-                    ));
+                    const auto w_0 = _mm256_load_si256(reinterpret_cast<const __m256i*>(&s_network.l2Weights[inputIdx][outputIdx + kChunkSize32 * 0]));
+                    const auto w_1 = _mm256_load_si256(reinterpret_cast<const __m256i*>(&s_network.l2Weights[inputIdx][outputIdx + kChunkSize32 * 1]));
+                    const auto w_2 = _mm256_load_si256(reinterpret_cast<const __m256i*>(&s_network.l2Weights[inputIdx][outputIdx + kChunkSize32 * 2]));
+                    const auto w_3 = _mm256_load_si256(reinterpret_cast<const __m256i*>(&s_network.l2Weights[inputIdx][outputIdx + kChunkSize32 * 3]));
 
                     auto out_0 =
                         _mm256_load_si256(reinterpret_cast<const __m256i*>(&l2Out[outputIdx + kChunkSize32 * 0]));
