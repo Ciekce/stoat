@@ -331,7 +331,7 @@ namespace stoat {
             thread.rootDepth = depth;
             thread.resetSeldepth();
 
-            i32 window = 20;
+            i32 window = 12;
 
             auto alpha = -kScoreInf;
             auto beta = kScoreInf;
