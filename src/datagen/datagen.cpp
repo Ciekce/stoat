@@ -85,7 +85,7 @@ namespace stoat::datagen {
                 const auto sennichite = newPos.testSennichite(false, keyHistory);
                 keyHistory.pop_back();
 
-                if (sennichite != SennichiteStatus::kWin) {
+                if (sennichite != SennichiteStatus::kWin || sennichite != SennichiteStatus::kLose) {
                     return move;
                 }
 
@@ -240,7 +240,7 @@ namespace stoat::datagen {
                     if (sennichite == SennichiteStatus::kDraw) {
                         outcome = format::Outcome::kDraw;
                         break;
-                    } else if (sennichite == SennichiteStatus::kWin) {
+                    } else if (sennichite == SennichiteStatus::kWin || sennichite == SennichiteStatus::kLose) {
                         const std::scoped_lock lock{s_printMutex};
 
                         auto& errStream = getErrStream(outDir);
