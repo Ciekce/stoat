@@ -595,6 +595,8 @@ namespace stoat {
 
                 if (score < sBeta) {
                     extension = 1;
+                } else if (ttEntry.score >= beta) {
+                    extension = -1;
                 }
             }
 
