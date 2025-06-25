@@ -594,7 +594,7 @@ namespace stoat {
                 curr.excluded = kNullMove;
 
                 if (score < sBeta) {
-                    if (!kPvNode && score < sBeta - 100) {
+                    if (!kPvNode && score < sBeta - 400) {
                         extension = 2;
                     } else {
                         extension = 1;
