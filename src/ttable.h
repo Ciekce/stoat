@@ -53,6 +53,10 @@ namespace stoat::tt {
         bool probe(ProbedEntry& dst, u64 key, i32 ply) const;
         void put(u64 key, Score score, Move move, i32 depth, i32 ply, Flag flag);
 
+        inline void age() {
+            m_age = (m_age + 1) % Entry::kAgeCycle;
+        }
+
         void clear();
 
         [[nodiscard]] u32 fullPermille() const;
@@ -63,11 +67,27 @@ namespace stoat::tt {
 
     private:
         struct alignas(8) Entry {
+            static constexpr u32 kAgeBits = 6;
+            static constexpr u32 kAgeCycle = 1 << kAgeBits;
+
             u16 key;
             i16 score;
             Move move;
             u8 depth;
-            Flag flag;
+            u8 ageFlag;
+
+            [[nodiscard]] inline u32 age() const {
+                return static_cast<u32>(ageFlag >> 2);
+            }
+
+            [[nodiscard]] inline Flag flag() const {
+                return static_cast<Flag>(ageFlag & 0x3);
+            }
+
+            inline void setAgeFlag(u32 age, Flag flag) {
+                assert(age < (1 << kAgeBits));
+                ageFlag = (age << 2) | static_cast<u32>(flag);
+            }
         };
 
         static_assert(sizeof(Entry) == 8);
@@ -78,6 +98,8 @@ namespace stoat::tt {
         // yes :pensive:
         Entry* m_entries{};
         usize m_entryCount{};
+
+        u32 m_age{};
 
         [[nodiscard]] constexpr usize index(u64 key) const {
             return static_cast<usize>((static_cast<u128>(key) * static_cast<u128>(m_entryCount)) >> 64);

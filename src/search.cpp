@@ -409,6 +409,8 @@ namespace stoat {
             waitForThreads();
 
             finalReport(m_startTime.elapsed());
+
+            m_ttable.age();
             stats::print();
 
             m_searching = false;

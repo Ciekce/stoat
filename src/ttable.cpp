@@ -104,7 +104,7 @@ namespace stoat::tt {
             dst.score = scoreFromTt(static_cast<Score>(entry.score), ply);
             dst.move = entry.move;
             dst.depth = static_cast<i32>(entry.depth);
-            dst.flag = entry.flag;
+            dst.flag = entry.flag();
 
             return true;
         }
@@ -123,6 +123,13 @@ namespace stoat::tt {
         auto& slot = m_entries[index(key)];
         auto entry = slot;
 
+        const bool replace =
+            flag == Flag::kExact || packedKey != entry.key || entry.age() != m_age || depth + 4 > entry.depth;
+
+        if (!replace) {
+            return;
+        }
+
         if (move || entry.key != packedKey) {
             entry.move = move;
         }
@@ -130,7 +137,7 @@ namespace stoat::tt {
         entry.key = packedKey;
         entry.score = static_cast<i16>(scoreToTt(score, ply));
         entry.depth = static_cast<u8>(depth);
-        entry.flag = flag;
+        entry.setAgeFlag(m_age, flag);
 
         slot = entry;
     }
@@ -147,7 +154,7 @@ namespace stoat::tt {
 
         for (usize i = 0; i < 1000; ++i) {
             const auto entry = m_entries[i];
-            if (entry.flag != Flag::kNone) {
+            if (entry.flag() != Flag::kNone && entry.age() == m_age) {
                 ++filledEntries;
             }
         }
