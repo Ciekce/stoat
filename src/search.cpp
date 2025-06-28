@@ -213,8 +213,9 @@ namespace stoat {
 
     void Searcher::stop() {
         m_stop.store(true, std::memory_order::relaxed);
+
+        std::unique_lock lock{m_stopMutex};
         if (m_runningThreads.load() > 0) {
-            std::unique_lock lock{m_stopMutex};
             m_stopSignal.wait(lock, [this] { return m_runningThreads.load() == 0; });
         }
     }
@@ -396,8 +397,11 @@ namespace stoat {
         }
 
         const auto waitForThreads = [&] {
-            --m_runningThreads;
-            m_stopSignal.notify_all();
+            {
+                const std::unique_lock lock{m_stopMutex};
+                --m_runningThreads;
+                m_stopSignal.notify_all();
+            }
 
             m_searchEndBarrier.arriveAndWait();
         };
