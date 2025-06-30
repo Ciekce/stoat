@@ -33,9 +33,10 @@
 
 namespace stoat::eval::nnue {
     constexpr u32 kHandFeatures = 38;
+    constexpr u32 kMergedGoldPieceTypes = 10;
 
     constexpr u32 kPieceStride = Squares::kCount;
-    constexpr u32 kHandOffset = kPieceStride * PieceTypes::kCount;
+    constexpr u32 kHandOffset = kPieceStride * kMergedGoldPieceTypes;
     constexpr u32 kColorStride = kHandOffset + kHandFeatures;
 
     [[nodiscard]] constexpr Square transformRelativeSquare(Square kingSq, Square sq) {
@@ -43,9 +44,11 @@ namespace stoat::eval::nnue {
     }
 
     [[nodiscard]] constexpr u32 psqtFeatureIndex(Color perspective, KingPair kings, Piece piece, Square sq) {
+        constexpr std::array kPieceTypeIndices = {0, 4, 1, 2, 4, 4, 3, 4, 4, 5, 6, 7, 8, 9};
         sq = sq.relative(perspective);
         sq = transformRelativeSquare(kings.relativeKingSq(perspective), sq);
-        return kColorStride * (piece.color() != perspective) + kPieceStride * piece.type().idx() + sq.idx();
+        return kColorStride * (piece.color() != perspective) + kPieceStride * kPieceTypeIndices[piece.type().idx()]
+             + sq.idx();
     }
 
     [[nodiscard]] constexpr u32 handFeatureIndex(Color perspective, PieceType pt, Color handColor, u32 countMinusOne) {
