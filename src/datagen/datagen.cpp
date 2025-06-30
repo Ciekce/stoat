@@ -216,8 +216,10 @@ namespace stoat::datagen {
                     thread.reset(pos, keyHistory);
                     searcher.runDatagenSearch();
 
-                    const auto blackScore = pos.stm() == Colors::kBlack ? thread.lastScore : -thread.lastScore;
-                    const auto move = thread.lastPv.moves[0];
+                    const auto& rootMove = thread.pvMove();
+
+                    const auto blackScore = pos.stm() == Colors::kBlack ? rootMove.score : -rootMove.score;
+                    const auto move = rootMove.pv.moves[0];
 
                     if (move.isNull()) {
                         outcome =

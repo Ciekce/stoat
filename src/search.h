@@ -112,7 +112,7 @@ namespace stoat {
         bool m_infinite{};
         std::unique_ptr<limit::ISearchLimiter> m_limiter{};
 
-        movegen::MoveList m_rootMoves{};
+        movegen::MoveList m_rootMoveList{};
 
         tt::TTable m_ttable;
 
@@ -132,10 +132,6 @@ namespace stoat {
         void stopThreads();
 
         void runSearch(ThreadData& thread);
-
-        [[nodiscard]] inline bool isLegalRootMove(Move move) const {
-            return std::ranges::find(m_rootMoves, move) != m_rootMoves.end();
-        }
 
         template <bool kPvNode = false, bool kRootNode = false>
         Score search(
@@ -164,9 +160,7 @@ namespace stoat {
         template <bool kPvNode = false>
         Score qsearch(ThreadData& thread, const Position& pos, i32 ply, Score alpha, Score beta);
 
-        void report(i32 depth, Score score, Score alpha, Score beta, f64 time, const PvList& pv);
-        void report(const ThreadData& bestThread, f64 time);
-
+        void report(const ThreadData& bestThread, i32 depth, f64 time);
         void finalReport(f64 time);
     };
 } // namespace stoat

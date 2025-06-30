@@ -191,8 +191,8 @@ namespace stoat {
         m_infinite = infinite;
         m_limiter = std::move(limiter);
 
-        m_rootMoves = rootMoves;
-        assert(!m_rootMoves.empty());
+        m_rootMoveList = rootMoves;
+        assert(!m_rootMoveList.empty());
 
         for (auto& thread : m_threads) {
             thread.reset(pos, keyHistory);
@@ -225,7 +225,7 @@ namespace stoat {
     }
 
     void Searcher::runBenchSearch(BenchInfo& info, const Position& pos, i32 depth) {
-        if (initRootMoves(m_rootMoves, pos) == RootStatus::kNoLegalMoves) {
+        if (initRootMoves(m_rootMoveList, pos) == RootStatus::kNoLegalMoves) {
             protocol::currHandler().printInfoString("no legal moves");
             return;
         }
@@ -266,9 +266,8 @@ namespace stoat {
         }
 
         auto& thread = mainThread();
-        thread.lastPv.reset();
 
-        if (initRootMoves(m_rootMoves, thread.rootPos) == RootStatus::kNoLegalMoves) {
+        if (initRootMoves(m_rootMoveList, thread.rootPos) == RootStatus::kNoLegalMoves) {
             return;
         }
 
@@ -322,12 +321,19 @@ namespace stoat {
     }
 
     void Searcher::runSearch(ThreadData& thread) {
-        assert(!m_rootMoves.empty());
+        assert(!m_rootMoveList.empty());
+
+        thread.rootMoves.clear();
+        thread.rootMoves.reserve(m_rootMoveList.size());
+
+        for (const auto move : m_rootMoveList) {
+            auto& rootMove = thread.rootMoves.emplace_back();
+
+            rootMove.pv.moves[0] = move;
+            rootMove.pv.length = 1;
+        }
 
         PvList rootPv{};
-
-        thread.lastScore = kScoreNone;
-        thread.lastPv.reset();
 
         for (i32 depth = 1;; ++depth) {
             thread.rootDepth = depth;
@@ -339,14 +345,18 @@ namespace stoat {
             auto beta = kScoreInf;
 
             if (depth >= 3) {
-                alpha = std::max(thread.lastScore - window, -kScoreInf);
-                beta = std::min(thread.lastScore + window, kScoreInf);
+                alpha = std::max(thread.pvMove().score - window, -kScoreInf);
+                beta = std::min(thread.pvMove().score + window, kScoreInf);
             }
 
             Score score;
 
             while (true) {
                 score = search<true, true>(thread, thread.rootPos, rootPv, depth, 0, alpha, beta, false);
+
+                std::ranges::stable_sort(thread.rootMoves, [](const RootMove& a, const RootMove& b) {
+                    return a.score > b.score;
+                });
 
                 if (hasStopped()) {
                     break;
@@ -359,7 +369,7 @@ namespace stoat {
                 if (thread.isMainThread()) {
                     const auto time = m_startTime.elapsed();
                     if (time >= kWideningReportDelay) {
-                        report(depth, score, alpha, beta, time, rootPv);
+                        report(thread, depth, time);
                     }
                 }
 
@@ -378,21 +388,18 @@ namespace stoat {
 
             thread.depthCompleted = depth;
 
-            thread.lastScore = score;
-            thread.lastPv = rootPv;
-
             if (depth >= thread.maxDepth) {
                 break;
             }
 
             if (thread.isMainThread()) {
-                m_limiter->update(depth, thread.lastPv.moves[0]);
+                m_limiter->update(depth, thread.pvMove().pv.moves[0]);
 
                 if (m_limiter->stopSoft(thread.loadNodes())) {
                     break;
                 }
 
-                report(thread, m_startTime.elapsed());
+                report(thread, depth, m_startTime.elapsed());
             }
         }
 
@@ -557,7 +564,7 @@ namespace stoat {
             }
 
             if constexpr (kRootNode) {
-                if (!isLegalRootMove(move)) {
+                if (!thread.isLegalRootMove(move)) {
                     continue;
                 }
                 assert(pos.isLegal(move));
@@ -673,8 +680,38 @@ namespace stoat {
                 return 0;
             }
 
-            if (kRootNode && thread.isMainThread()) {
-                m_limiter->addMoveNodes(move, thread.loadNodes() - prevNodes);
+            if (kRootNode) {
+                if (thread.isMainThread()) {
+                    m_limiter->addMoveNodes(move, thread.loadNodes() - prevNodes);
+                }
+
+                auto* rootMove = thread.findRootMove(move);
+
+                if (!rootMove) {
+                    fmt::println(stderr, "Failed to find root move for {}", move);
+                    std::terminate();
+                }
+
+                if (legalMoves == 1 || score > alpha) {
+                    rootMove->seldepth = thread.loadSeldepth();
+
+                    rootMove->score = score;
+
+                    rootMove->upperbound = false;
+                    rootMove->lowerbound = false;
+
+                    if (score <= alpha) {
+                        rootMove->score = alpha;
+                        rootMove->upperbound = true;
+                    } else if (score >= beta) {
+                        rootMove->score = beta;
+                        rootMove->lowerbound = true;
+                    }
+
+                    rootMove->pv.update(move, curr.pv);
+                } else {
+                    rootMove->score = -kScoreInf;
+                }
             }
 
             if (score > bestScore) {
@@ -825,10 +862,14 @@ namespace stoat {
         return bestScore;
     }
 
-    void Searcher::report(i32 depth, Score score, Score alpha, Score beta, f64 time, const PvList& pv) {
+    void Searcher::report(const ThreadData& bestThread, i32 depth, f64 time) {
         if (m_silent) {
             return;
         }
+
+        const auto& move = bestThread.pvMove();
+
+        auto score = move.score;
 
         usize totalNodes = 0;
         i32 maxSeldepth = 0;
@@ -840,13 +881,11 @@ namespace stoat {
 
         auto bound = protocol::ScoreBound::kExact;
 
-        if (score <= alpha) {
+        if (move.upperbound) {
             bound = protocol::ScoreBound::kUpperBound;
-        } else if (score >= beta) {
+        } else if (move.lowerbound) {
             bound = protocol::ScoreBound::kLowerBound;
         }
-
-        score = std::clamp(score, alpha, beta);
 
         protocol::DisplayScore displayScore;
 
@@ -872,15 +911,11 @@ namespace stoat {
             .nodes = totalNodes,
             .score = displayScore,
             .scoreBound = bound,
-            .pv = pv,
+            .pv = move.pv,
             .hashfull = m_ttable.fullPermille(),
         };
 
         protocol::currHandler().printSearchInfo(info);
-    }
-
-    void Searcher::report(const ThreadData& bestThread, f64 time) {
-        report(bestThread.depthCompleted, bestThread.lastScore, -kScoreInf, kScoreInf, time, bestThread.lastPv);
     }
 
     void Searcher::finalReport(f64 time) {
@@ -890,7 +925,7 @@ namespace stoat {
 
         const auto& bestThread = m_threads[0];
 
-        report(bestThread, time);
-        protocol::currHandler().printBestMove(bestThread.lastPv.moves[0]);
+        report(bestThread, bestThread.depthCompleted, time);
+        protocol::currHandler().printBestMove(bestThread.pvMove().pv.moves[0]);
     }
 } // namespace stoat

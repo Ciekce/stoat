@@ -57,4 +57,17 @@ namespace stoat {
             std::forward_as_tuple(keyHistory, nnueState)
         };
     }
+
+    RootMove* ThreadData::findRootMove(stoat::Move move) {
+        for (u32 idx = 0; idx < rootMoves.size(); ++idx) {
+            auto& rootMove = rootMoves[idx];
+            assert(rootMove.pv.length > 0);
+
+            if (move == rootMove.pv.moves[0]) {
+                return &rootMove;
+            }
+        }
+
+        return nullptr;
+    }
 } // namespace stoat

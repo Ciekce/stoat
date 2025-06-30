@@ -49,6 +49,16 @@ namespace stoat {
         }
     };
 
+    struct RootMove {
+        Score score{-kScoreInf};
+
+        bool upperbound{false};
+        bool lowerbound{false};
+
+        i32 seldepth{};
+        PvList pv{};
+    };
+
     template <bool kUpdateNnue>
     class ThreadPosGuard {
     public:
@@ -95,12 +105,11 @@ namespace stoat {
         i32 rootDepth{};
         i32 depthCompleted{};
 
-        Score lastScore{};
-        PvList lastPv{};
-
         HistoryTables history{};
 
         eval::nnue::NnueState nnueState{};
+
+        std::vector<RootMove> rootMoves{};
 
         std::vector<StackFrame> stack{};
 
@@ -134,5 +143,19 @@ namespace stoat {
 
         [[nodiscard]] std::pair<Position, ThreadPosGuard<true>> applyMove(i32 ply, const Position& pos, Move move);
         [[nodiscard]] std::pair<Position, ThreadPosGuard<false>> applyNullMove(i32 ply, const Position& pos);
+
+        [[nodiscard]] RootMove* findRootMove(Move move);
+
+        [[nodiscard]] inline bool isLegalRootMove(Move move) {
+            return findRootMove(move) != nullptr;
+        }
+
+        [[nodiscard]] inline RootMove& pvMove() {
+            return rootMoves[0];
+        }
+
+        [[nodiscard]] inline const RootMove& pvMove() const {
+            return rootMoves[0];
+        }
     };
 } // namespace stoat
