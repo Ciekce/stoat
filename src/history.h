@@ -55,7 +55,7 @@ namespace stoat {
     class ContinuationSubtable {
     public:
         //TODO take two args when c++23 is usable
-        inline HistoryScore operator[](std::tuple<const Position&, Move> ctx) const {
+        inline HistoryScore operator[](std::pair<const Position&, Move> ctx) const {
             const auto [pos, move] = std::move(ctx);
             if (move.isDrop()) {
                 return m_data[true][move.dropPiece().withColor(pos.stm()).idx()][move.to().idx()];
@@ -64,7 +64,7 @@ namespace stoat {
             }
         }
 
-        inline HistoryEntry& operator[](std::tuple<const Position&, Move> ctx) {
+        inline HistoryEntry& operator[](std::pair<const Position&, Move> ctx) {
             const auto [pos, move] = std::move(ctx);
             if (move.isDrop()) {
                 return m_data[true][move.dropPiece().withColor(pos.stm()).idx()][move.to().idx()];
