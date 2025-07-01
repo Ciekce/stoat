@@ -61,10 +61,15 @@ namespace stoat {
         [[nodiscard]] HistoryScore nonCaptureScore(Move move) const;
         void updateNonCaptureScore(Move move, HistoryScore bonus);
 
+        [[nodiscard]] HistoryScore captureScore(Move move, PieceType captured) const;
+        void updateCaptureScore(Move move, PieceType captured, HistoryScore bonus);
+
     private:
         // [promo][from][to]
         util::MultiArray<HistoryEntry, 2, Squares::kCount, Squares::kCount> m_nonCaptureNonDrop{};
         // [dropped piece type][drop square]
         util::MultiArray<HistoryEntry, PieceTypes::kCount, Squares::kCount> m_drop{};
+        // [promo][from][to][captured]
+        util::MultiArray<HistoryEntry, 2, Squares::kCount, Squares::kCount, PieceTypes::kCount> m_capture{};
     };
 } // namespace stoat

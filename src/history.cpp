@@ -24,6 +24,7 @@ namespace stoat {
     void HistoryTables::clear() {
         std::memset(m_nonCaptureNonDrop.data(), 0, sizeof(m_nonCaptureNonDrop));
         std::memset(m_drop.data(), 0, sizeof(m_drop));
+        std::memset(m_capture.data(), 0, sizeof(m_capture));
     }
 
     HistoryScore HistoryTables::nonCaptureScore(Move move) const {
@@ -40,5 +41,13 @@ namespace stoat {
         } else {
             m_nonCaptureNonDrop[move.isPromo()][move.from().idx()][move.to().idx()].update(bonus);
         }
+    }
+
+    HistoryScore HistoryTables::captureScore(Move move, PieceType captured) const {
+        return m_capture[move.isPromo()][move.from().idx()][move.to().idx()][captured.idx()];
+    }
+
+    void HistoryTables::updateCaptureScore(Move move, PieceType captured, HistoryScore bonus) {
+        m_capture[move.isPromo()][move.from().idx()][move.to().idx()][captured.idx()].update(bonus);
     }
 } // namespace stoat

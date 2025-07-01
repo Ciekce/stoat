@@ -579,6 +579,7 @@ namespace stoat {
 
         auto generator = MoveGenerator::main(pos, ttMove, thread.history);
 
+        util::StaticVector<Move, 64> capturesTried{};
         util::StaticVector<Move, 64> nonCapturesTried{};
 
         u32 legalMoves{};
@@ -775,12 +776,23 @@ namespace stoat {
             return -kScoreMate + ply;
         }
 
-        if (bestMove && !pos.isCapture(bestMove)) {
+        if (bestMove) {
             const auto bonus = historyBonus(depth);
-            thread.history.updateNonCaptureScore(bestMove, bonus);
 
-            for (const auto prevNonCapture : nonCapturesTried) {
-                thread.history.updateNonCaptureScore(prevNonCapture, -bonus);
+            if (!pos.isCapture(bestMove)) {
+                thread.history.updateNonCaptureScore(bestMove, bonus);
+
+                for (const auto prevNonCapture : nonCapturesTried) {
+                    thread.history.updateNonCaptureScore(prevNonCapture, -bonus);
+                }
+            } else {
+                const auto captured = pos.pieceOn(bestMove.to()).type();
+                thread.history.updateCaptureScore(bestMove, captured, bonus);
+            }
+
+            for (const auto prevCapture : capturesTried) {
+                const auto captured = pos.pieceOn(prevCapture.to()).type();
+                thread.history.updateCaptureScore(prevCapture, captured, -bonus);
             }
         }
 
