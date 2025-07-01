@@ -64,13 +64,34 @@ namespace stoat {
             m_skipNonCaptures = true;
         }
 
-        [[nodiscard]] static MoveGenerator main(const Position& pos, Move ttMove, const HistoryTables& history);
-        [[nodiscard]] static MoveGenerator qsearch(const Position& pos, const HistoryTables& history);
+        [[nodiscard]] static MoveGenerator main(
+            const Position& pos,
+            Move ttMove,
+            const HistoryTables& history,
+            std::span<ContinuationSubtable* const> continuations,
+            i32 ply
+        );
+
+        [[nodiscard]] static MoveGenerator qsearch(
+            const Position& pos,
+            const HistoryTables& history,
+            std::span<ContinuationSubtable* const> continuations,
+            i32 ply
+        );
 
     private:
-        MoveGenerator(MovegenStage initialStage, const Position& pos, Move ttMove, const HistoryTables& history);
+        MoveGenerator(
+            MovegenStage initialStage,
+            const Position& pos,
+            Move ttMove,
+            const HistoryTables& history,
+            std::span<ContinuationSubtable* const> continuations,
+            i32 ply
+        );
+
         [[nodiscard]] i32 scoreCapture(Move move);
         void scoreCaptures();
+
         [[nodiscard]] i32 scoreNonCapture(Move move);
         void scoreNonCaptures();
 
@@ -98,6 +119,9 @@ namespace stoat {
 
         Move m_ttMove;
         const HistoryTables& m_history;
+
+        std::span<ContinuationSubtable* const> m_continuations;
+        i32 m_ply{};
 
         bool m_skipNonCaptures{false};
 

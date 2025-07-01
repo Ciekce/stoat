@@ -141,23 +141,43 @@ namespace stoat {
         }
     }
 
-    MoveGenerator MoveGenerator::main(const Position& pos, Move ttMove, const HistoryTables& history) {
-        return MoveGenerator{MovegenStage::kTtMove, pos, ttMove, history};
+    MoveGenerator MoveGenerator::main(
+        const Position& pos,
+        Move ttMove,
+        const HistoryTables& history,
+        std::span<ContinuationSubtable* const> continuations,
+        i32 ply
+    ) {
+        assert(continuations.size() == kMaxDepth + 1);
+        return MoveGenerator{MovegenStage::kTtMove, pos, ttMove, history, continuations, ply};
     }
 
-    MoveGenerator MoveGenerator::qsearch(const Position& pos, const HistoryTables& history) {
+    MoveGenerator MoveGenerator::qsearch(
+        const Position& pos,
+        const HistoryTables& history,
+        std::span<ContinuationSubtable* const> continuations,
+        i32 ply
+    ) {
+        assert(continuations.size() == kMaxDepth + 1);
         const auto initialStage =
             pos.isInCheck() ? MovegenStage::kQsearchEvasionsGenerateCaptures : MovegenStage::kQsearchGenerateCaptures;
-        return MoveGenerator{initialStage, pos, kNullMove, history};
+        return MoveGenerator{initialStage, pos, kNullMove, history, continuations, ply};
     }
 
     MoveGenerator::MoveGenerator(
         MovegenStage initialStage,
         const Position& pos,
         Move ttMove,
-        const HistoryTables& history
+        const HistoryTables& history,
+        std::span<ContinuationSubtable* const> continuations,
+        i32 ply
     ) :
-            m_stage{initialStage}, m_pos{pos}, m_ttMove{ttMove}, m_history{history} {}
+            m_stage{initialStage},
+            m_pos{pos},
+            m_ttMove{ttMove},
+            m_history{history},
+            m_continuations{continuations},
+            m_ply{ply} {}
 
     i32 MoveGenerator::scoreCapture(Move move) {
         const auto captured = m_pos.pieceOn(move.to()).type();
@@ -171,7 +191,7 @@ namespace stoat {
     }
 
     i32 MoveGenerator::scoreNonCapture(Move move) {
-        return m_history.nonCaptureScore(move);
+        return m_history.nonCaptureScore(m_continuations, m_ply, m_pos, move);
     }
 
     void MoveGenerator::scoreNonCaptures() {

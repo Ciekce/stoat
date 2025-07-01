@@ -21,9 +21,11 @@
 #include "types.h"
 
 #include <algorithm>
+#include <utility>
 
 #include "core.h"
 #include "move.h"
+#include "position.h"
 #include "util/multi_array.h"
 
 namespace stoat {
@@ -50,6 +52,32 @@ namespace stoat {
         }
     };
 
+    class ContinuationSubtable {
+    public:
+        //TODO take two args when c++23 is usable
+        inline HistoryScore operator[](std::tuple<const Position&, Move> ctx) const {
+            const auto [pos, move] = std::move(ctx);
+            if (move.isDrop()) {
+                return m_data[true][move.dropPiece().withColor(pos.stm()).idx()][move.to().idx()];
+            } else {
+                return m_data[false][pos.pieceOn(move.from()).idx()][move.to().idx()];
+            }
+        }
+
+        inline HistoryEntry& operator[](std::tuple<const Position&, Move> ctx) {
+            const auto [pos, move] = std::move(ctx);
+            if (move.isDrop()) {
+                return m_data[true][move.dropPiece().withColor(pos.stm()).idx()][move.to().idx()];
+            } else {
+                return m_data[false][pos.pieceOn(move.from()).idx()][move.to().idx()];
+            }
+        }
+
+    private:
+        // [drop][piece][to]
+        util::MultiArray<HistoryEntry, 2, Pieces::kCount, Squares::kCount> m_data{};
+    };
+
     [[nodiscard]] constexpr HistoryScore historyBonus(i32 depth) {
         return static_cast<HistoryScore>(std::clamp(depth * 300 - 300, 0, 2500));
     }
@@ -58,10 +86,40 @@ namespace stoat {
     public:
         void clear();
 
-        [[nodiscard]] HistoryScore nonCaptureScore(Move move) const;
-        void updateNonCaptureScore(Move move, HistoryScore bonus);
+        [[nodiscard]] inline const ContinuationSubtable& contTable(const Position& pos, Move move) const {
+            if (move.isDrop()) {
+                return m_continuation[true][move.dropPiece().withColor(pos.stm()).idx()][move.to().idx()];
+            } else {
+                return m_continuation[false][pos.pieceOn(move.from()).idx()][move.to().idx()];
+            }
+        }
 
-        [[nodiscard]] HistoryScore captureScore(Move move, PieceType captured) const;
+        [[nodiscard]] inline ContinuationSubtable& contTable(const Position& pos, Move move) {
+            if (move.isDrop()) {
+                return m_continuation[true][move.dropPiece().withColor(pos.stm()).idx()][move.to().idx()];
+            } else {
+                return m_continuation[false][pos.pieceOn(move.from()).idx()][move.to().idx()];
+            }
+        }
+
+        [[nodiscard]] i32 mainNonCaptureScore(Move move) const;
+
+        [[nodiscard]] i32 nonCaptureScore(
+            std::span<ContinuationSubtable* const> continuations,
+            i32 ply,
+            const Position& pos,
+            Move move
+        ) const;
+
+        void updateNonCaptureScore(
+            std::span<ContinuationSubtable*> continuations,
+            i32 ply,
+            const Position& pos,
+            Move move,
+            HistoryScore bonus
+        );
+
+        [[nodiscard]] i32 captureScore(Move move, PieceType captured) const;
         void updateCaptureScore(Move move, PieceType captured, HistoryScore bonus);
 
     private:
@@ -69,6 +127,10 @@ namespace stoat {
         util::MultiArray<HistoryEntry, 2, Squares::kCount, Squares::kCount> m_nonCaptureNonDrop{};
         // [dropped piece type][drop square]
         util::MultiArray<HistoryEntry, PieceTypes::kCount, Squares::kCount> m_drop{};
+
+        // [drop][prev piece][to]
+        util::MultiArray<ContinuationSubtable, 2, Pieces::kCount, Squares::kCount> m_continuation{};
+
         // [promo][from][to][captured]
         util::MultiArray<HistoryEntry, 2, Squares::kCount, Squares::kCount, PieceTypes::kCount> m_capture{};
     };

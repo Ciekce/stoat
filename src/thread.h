@@ -114,6 +114,7 @@ namespace stoat {
         std::vector<RootMove> rootMoves{};
 
         std::vector<StackFrame> stack{};
+        std::vector<ContinuationSubtable*> conthist{};
 
         [[nodiscard]] inline u32 isMainThread() const {
             return id == 0;

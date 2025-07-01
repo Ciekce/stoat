@@ -577,7 +577,7 @@ namespace stoat {
 
         auto ttFlag = tt::Flag::kUpperBound;
 
-        auto generator = MoveGenerator::main(pos, ttMove, thread.history);
+        auto generator = MoveGenerator::main(pos, ttMove, thread.history, thread.conthist, ply);
 
         util::StaticVector<Move, 64> capturesTried{};
         util::StaticVector<Move, 64> nonCapturesTried{};
@@ -601,7 +601,7 @@ namespace stoat {
             }
 
             const auto baseLmr = s_lmrTable[depth][std::min<u32>(legalMoves, kLmrTableMoves - 1)];
-            const auto history = pos.isCapture(move) ? 0 : thread.history.nonCaptureScore(move);
+            const auto history = pos.isCapture(move) ? 0 : thread.history.mainNonCaptureScore(move);
 
             if (!kRootNode && bestScore > -kScoreWin && (!kPvNode || !thread.datagen)) {
                 if (legalMoves >= kLmpTable[std::min<usize>(depth, kLmpTable.size() - 1)]) {
@@ -784,10 +784,10 @@ namespace stoat {
             const auto bonus = historyBonus(depth);
 
             if (!pos.isCapture(bestMove)) {
-                thread.history.updateNonCaptureScore(bestMove, bonus);
+                thread.history.updateNonCaptureScore(thread.conthist, ply, pos, bestMove, bonus);
 
                 for (const auto prevNonCapture : nonCapturesTried) {
-                    thread.history.updateNonCaptureScore(prevNonCapture, -bonus);
+                    thread.history.updateNonCaptureScore(thread.conthist, ply, pos, prevNonCapture, -bonus);
                 }
             } else {
                 const auto captured = pos.pieceOn(bestMove.to()).type();
@@ -850,7 +850,7 @@ namespace stoat {
 
         auto bestScore = staticEval;
 
-        auto generator = MoveGenerator::qsearch(pos, thread.history);
+        auto generator = MoveGenerator::qsearch(pos, thread.history, thread.conthist, ply);
 
         u32 legalMoves{};
 
