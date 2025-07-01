@@ -852,6 +852,8 @@ namespace stoat {
 
         auto generator = MoveGenerator::qsearch(pos, thread.history);
 
+        u32 legalMoves{};
+
         while (const auto move = generator.next()) {
             assert(pos.isPseudolegal(move));
 
@@ -868,7 +870,13 @@ namespace stoat {
                     bestScore = std::max(bestScore, staticEval + 150);
                     continue;
                 }
+
+                if (legalMoves >= 3) {
+                    break;
+                }
             }
+
+            ++legalMoves;
 
             const auto [newPos, guard] = thread.applyMove(ply, pos, move);
             const auto sennichite = newPos.testSennichite(m_cuteChessWorkaround, thread.keyHistory);
