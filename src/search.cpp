@@ -766,8 +766,12 @@ namespace stoat {
                 break;
             }
 
-            if (move != bestMove && !pos.isCapture(move)) {
-                nonCapturesTried.tryPush(move);
+            if (move != bestMove) {
+                if (pos.isCapture(move)) {
+                    capturesTried.tryPush(move);
+                } else {
+                    nonCapturesTried.tryPush(move);
+                }
             }
         }
 
