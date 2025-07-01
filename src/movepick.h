@@ -31,9 +31,10 @@ namespace stoat {
     enum class MovegenStage : i32 {
         kTtMove = 0,
         kGenerateCaptures,
-        kCaptures,
+        kGoodCaptures,
         kGenerateNonCaptures,
         kNonCaptures,
+        kBadCaptures,
         kQsearchGenerateCaptures,
         kQsearchCaptures,
         kQsearchEvasionsGenerateCaptures,
@@ -97,9 +98,10 @@ namespace stoat {
 
         [[nodiscard]] usize findNext();
 
+        template <bool kSort = true>
         [[nodiscard]] inline Move selectNext(auto predicate) {
             while (m_idx < m_end) {
-                const auto idx = findNext();
+                const auto idx = kSort ? findNext() : m_idx++;
                 const auto move = m_moves[idx];
 
                 if (predicate(move)) {
@@ -127,5 +129,7 @@ namespace stoat {
 
         usize m_idx{};
         usize m_end{};
+
+        usize m_badCapturesEnd{};
     };
 } // namespace stoat

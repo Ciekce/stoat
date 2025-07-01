@@ -43,9 +43,20 @@ namespace stoat {
                 [[fallthrough]];
             }
 
-            case MovegenStage::kCaptures: {
-                if (const auto move = selectNext([this](Move move) { return move != m_ttMove; })) {
-                    return move;
+            case MovegenStage::kGoodCaptures: {
+                while (m_idx < m_end) {
+                    const auto idx = findNext();
+                    const auto move = m_moves[idx];
+
+                    if (move == m_ttMove) {
+                        continue;
+                    }
+
+                    if (see::see(m_pos, move, 0)) {
+                        return move;
+                    }
+
+                    m_moves[m_badCapturesEnd++] = m_moves[idx];
                 }
 
                 ++m_stage;
@@ -69,6 +80,18 @@ namespace stoat {
                     if (const auto move = selectNext([this](Move move) { return move != m_ttMove; })) {
                         return move;
                     }
+                }
+
+                m_idx = 0;
+                m_end = m_badCapturesEnd;
+
+                ++m_stage;
+                [[fallthrough]];
+            }
+
+            case MovegenStage::kBadCaptures: {
+                if (const auto move = selectNext<false>([this](auto move) { return move != m_ttMove; })) {
+                    return move;
                 }
 
                 m_stage = MovegenStage::kEnd;
