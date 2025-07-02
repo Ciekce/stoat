@@ -832,6 +832,9 @@ namespace stoat {
             return pos.isInCheck() ? 0 : eval::staticEval(pos, thread.nnueState);
         }
 
+        tt::ProbedEntry ttEntry{};
+        const bool ttHit = m_ttable.probe(ttEntry, pos.key(), ply);
+
         Score staticEval;
 
         if (pos.isInCheck()) {
@@ -850,7 +853,7 @@ namespace stoat {
 
         auto bestScore = staticEval;
 
-        auto generator = MoveGenerator::qsearch(pos, thread.history, thread.conthist, ply);
+        auto generator = MoveGenerator::qsearch(pos, ttEntry.move, thread.history, thread.conthist, ply);
 
         u32 legalMoves{};
 

@@ -35,8 +35,10 @@ namespace stoat {
         kGenerateNonCaptures,
         kNonCaptures,
         kBadCaptures,
+        kQsearchTtMove,
         kQsearchGenerateCaptures,
         kQsearchCaptures,
+        kQsearchEvasionsTtMove,
         kQsearchEvasionsGenerateCaptures,
         kQsearchEvasionsCaptures,
         kQsearchEvasionsGenerateNonCaptures,
@@ -75,6 +77,7 @@ namespace stoat {
 
         [[nodiscard]] static MoveGenerator qsearch(
             const Position& pos,
+            Move ttMove,
             const HistoryTables& history,
             std::span<ContinuationSubtable* const> continuations,
             i32 ply
