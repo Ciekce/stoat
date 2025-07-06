@@ -20,6 +20,8 @@
 
 #include <array>
 
+#include "stoatformat.h"
+
 namespace stoat::datagen::format {
     Stoatpack::Stoatpack() {
         m_unscoredMoves.reserve(16);
@@ -27,6 +29,15 @@ namespace stoat::datagen::format {
     }
 
     void Stoatpack::startStandard() {
+        m_startpos = {};
+
+        m_unscoredMoves.clear();
+        m_moves.clear();
+    }
+
+    void Stoatpack::start(const stoat::Position& pos) {
+        m_startpos = pos;
+
         m_unscoredMoves.clear();
         m_moves.clear();
     }
@@ -45,9 +56,17 @@ namespace stoat::datagen::format {
         static constexpr ScoredMove kNullTerminator = {0, 0};
 
         static constexpr u8 kStandardType = 0;
+        static constexpr u8 kArbitraryType = 2;
 
-        const u8 wdlType = kStandardType | (static_cast<u8>(outcome) << 6);
+        const auto type = m_startpos ? kArbitraryType : kStandardType;
+
+        const u8 wdlType = type | (static_cast<u8>(outcome) << 6);
         stream.write(reinterpret_cast<const char*>(&wdlType), sizeof(wdlType));
+
+        if (m_startpos) {
+            const auto startposRecord = StoatformatRecord::pack(*m_startpos, 0, Outcome::kDraw);
+            stream.write(reinterpret_cast<const char*>(&startposRecord), sizeof(startposRecord));
+        }
 
         const u16 unscoredCount = m_unscoredMoves.size();
         stream.write(reinterpret_cast<const char*>(&unscoredCount), sizeof(unscoredCount));

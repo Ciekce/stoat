@@ -38,7 +38,7 @@ namespace stoat::datagen::format {
         virtual ~IDataFormat() = default;
 
         virtual void startStandard() = 0;
-        //TODO shogi960, arbitrary position
+        virtual void start(const Position& pos) = 0;
 
         virtual void pushUnscored(Move move) = 0;
         virtual void push(Move move, Score score) = 0;

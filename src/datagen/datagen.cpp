@@ -66,10 +66,7 @@ namespace stoat::datagen {
             util::signal::addCtrlCHandler([] { s_stop.store(true); });
         }
 
-        [[nodiscard]] Position getStartpos(
-            util::rng::Jsf64Rng& rng,
-            format::IDataFormat& format
-        ) {
+        [[nodiscard]] std::optional<Position> getStartpos(util::rng::Jsf64Rng& rng, format::IDataFormat& format) {
             static constexpr std::array kStandardBackrank = {
                 PieceTypes::kLance,
                 PieceTypes::kKnight,
@@ -118,7 +115,22 @@ namespace stoat::datagen {
                 senteBackrank
             );
 
-            return Position::fromSfen(sfen).take();
+            Position pos;
+
+            if (auto parsed = Position::fromSfen(sfen)) {
+                pos = parsed.take();
+            } else {
+                fmt::println(
+                    stderr,
+                    "Failed to parse constructed SFEN for startpos?? ({})",
+                    parsed.takeErr().message()
+                );
+                return {};
+            }
+
+            format.start(pos);
+
+            return pos;
         }
 
         void runThread(u32 id, u64 seed, const std::filesystem::path& outDir) {
@@ -173,11 +185,18 @@ namespace stoat::datagen {
 
             while (!s_stop.load()) {
                 searcher.newGame();
-
-                format.startStandard();
                 keyHistory.clear();
 
-                auto pos = getStartpos(rng, format);
+                const auto startpos = getStartpos(rng, format);
+
+                Position pos;
+
+                if (startpos) {
+                    pos = *startpos;
+                } else {
+                    continue;
+                }
+
                 thread.nnueState.reset(pos);
 
                 u32 winPlies{};

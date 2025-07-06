@@ -20,6 +20,7 @@
 
 #include "../../types.h"
 
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -32,6 +33,7 @@ namespace stoat::datagen::format {
         ~Stoatpack() final = default;
 
         void startStandard() final;
+        void start(const Position& pos) final;
 
         void pushUnscored(Move move) final;
         void push(Move move, Score score) final;
@@ -41,6 +43,8 @@ namespace stoat::datagen::format {
     private:
         using ScoredMove = std::pair<u16, i16>;
         static_assert(sizeof(ScoredMove) == sizeof(u16) + sizeof(i16));
+
+        std::optional<Position> m_startpos{};
 
         std::vector<u16> m_unscoredMoves{};
         std::vector<ScoredMove> m_moves{};
