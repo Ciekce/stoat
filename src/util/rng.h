@@ -27,6 +27,8 @@
 namespace stoat::util::rng {
     class Jsf64Rng {
     public:
+        using result_type = u64;
+
         explicit constexpr Jsf64Rng(u64 seed) :
                 m_b{seed}, m_c{seed}, m_d{seed} {
             for (i32 i = 0; i < 20; ++i) {
@@ -81,6 +83,18 @@ namespace stoat::util::rng {
             }
 
             return static_cast<u32>(m >> 32);
+        }
+
+        [[nodiscard]] constexpr u64 operator()() {
+            return nextU64();
+        }
+
+        static constexpr u64 min() {
+            return std::numeric_limits<u64>::min();
+        }
+
+        static constexpr u64 max() {
+            return std::numeric_limits<u64>::max();
         }
 
     private:

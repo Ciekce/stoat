@@ -18,6 +18,7 @@
 
 #include "datagen.h"
 
+#include <algorithm>
 #include <atomic>
 #include <filesystem>
 #include <fstream>
@@ -65,86 +66,59 @@ namespace stoat::datagen {
             util::signal::addCtrlCHandler([] { s_stop.store(true); });
         }
 
-        // NOTE: this does not test for entering kings
-        [[nodiscard]] Move selectRandomLegal(
-            util::rng::Jsf64Rng& rng,
-            const Position& pos,
-            std::vector<u64>& keyHistory,
-            movegen::MoveList& moves
-        ) {
-            for (usize start = 0; start < moves.size(); ++start) {
-                const auto idx = start + rng.nextU32(moves.size() - start);
-                const auto move = moves[idx];
-
-                if (!pos.isLegal(move)) {
-                    continue;
-                }
-
-                keyHistory.push_back(pos.key());
-                const auto newPos = pos.applyMove(move);
-                const auto sennichite = newPos.testSennichite(false, keyHistory);
-                keyHistory.pop_back();
-
-                if (sennichite != SennichiteStatus::kWin) {
-                    return move;
-                }
-
-                std::swap(moves[start], moves[idx]);
-            }
-
-            return kNullMove;
-        }
-
         [[nodiscard]] Position getStartpos(
             util::rng::Jsf64Rng& rng,
-            std::vector<u64>& keyHistory,
             format::IDataFormat& format
         ) {
-            util::StaticVector<Move, kBaseRandomMoves + kRandomizeStartSide> randomMoves{};
-            util::StaticVector<u64, kBaseRandomMoves + kRandomizeStartSide> newKeys{};
+            static constexpr std::array kStandardBackrank = {
+                PieceTypes::kLance,
+                PieceTypes::kKnight,
+                PieceTypes::kSilver,
+                PieceTypes::kGold,
+                PieceTypes::kKing,
+                PieceTypes::kGold,
+                PieceTypes::kSilver,
+                PieceTypes::kKnight,
+                PieceTypes::kLance,
+            };
 
-            Position pos{};
+            static constexpr std::array kStandardSecondRank = {
+                PieceTypes::kNone,
+                PieceTypes::kBishop,
+                PieceTypes::kNone,
+                PieceTypes::kNone,
+                PieceTypes::kNone,
+                PieceTypes::kNone,
+                PieceTypes::kNone,
+                PieceTypes::kRook,
+                PieceTypes::kNone,
+            };
 
-            const usize count = kBaseRandomMoves + (kRandomizeStartSide ? (rng.nextU64() >> 63) : 0);
+            const auto getRank = [&](Color c, std::span<const PieceType, 9> pieces) {
+                std::string rank{};
+                rank.reserve(9);
 
-            while (true) {
-                randomMoves.clear();
-                newKeys.clear();
+                std::ranges::transform(pieces, rank.begin(), [&](PieceType pt) { return pt.withColor(c).str()[0]; });
+                std::ranges::shuffle(rank, rng);
 
-                pos = Position::startpos();
+                return rank;
+            };
 
-                movegen::MoveList moves{};
-                bool failed = false;
+            const auto senteBackrank = getRank(Colors::kBlack, kStandardBackrank);
+            const auto senteSecondRank = getRank(Colors::kBlack, kStandardSecondRank);
 
-                for (usize i = 0; i < count; ++i) {
-                    moves.clear();
-                    movegen::generateAll(moves, pos);
+            const auto goteBackrank = getRank(Colors::kWhite, kStandardBackrank);
+            const auto goteSecondRank = getRank(Colors::kWhite, kStandardSecondRank);
 
-                    const auto move = selectRandomLegal(rng, pos, keyHistory, moves);
+            const auto sfen = fmt::format(
+                "{}/{}/ppppppppp/9/9/9/PPPPPPPPP/{}/{} b - 1",
+                goteBackrank,
+                goteSecondRank,
+                senteSecondRank,
+                senteBackrank
+            );
 
-                    if (!move) {
-                        failed = true;
-                        break;
-                    }
-
-                    randomMoves.push(move);
-                    newKeys.push(pos.key());
-
-                    pos = pos.applyMove(move);
-                }
-
-                if (!failed) {
-                    break;
-                }
-            }
-
-            std::ranges::copy(newKeys, std::back_inserter(keyHistory));
-
-            for (const auto move : randomMoves) {
-                format.pushUnscored(move);
-            }
-
-            return pos;
+            return Position::fromSfen(sfen).take();
         }
 
         void runThread(u32 id, u64 seed, const std::filesystem::path& outDir) {
@@ -203,7 +177,7 @@ namespace stoat::datagen {
                 format.startStandard();
                 keyHistory.clear();
 
-                auto pos = getStartpos(rng, keyHistory, format);
+                auto pos = getStartpos(rng, format);
                 thread.nnueState.reset(pos);
 
                 u32 winPlies{};
