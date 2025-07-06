@@ -93,7 +93,7 @@ namespace stoat::datagen {
 
             const auto getRank = [&](Color c, std::span<const PieceType, 9> pieces) {
                 std::string rank{};
-                rank.reserve(9);
+                rank.resize(9);
 
                 std::ranges::transform(pieces, rank.begin(), [&](PieceType pt) { return pt.withColor(c).str()[0]; });
                 std::ranges::shuffle(rank, rng);
