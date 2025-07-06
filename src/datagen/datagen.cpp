@@ -95,7 +95,10 @@ namespace stoat::datagen {
                 std::string rank{};
                 rank.resize(9);
 
-                std::ranges::transform(pieces, rank.begin(), [&](PieceType pt) { return pt.withColor(c).str()[0]; });
+                std::ranges::transform(pieces, rank.begin(), [&](PieceType pt) {
+                    return pt ? pt.withColor(c).str()[0] : '1';
+                });
+
                 std::ranges::shuffle(rank, rng);
 
                 return rank;
@@ -120,11 +123,12 @@ namespace stoat::datagen {
             if (auto parsed = Position::fromSfen(sfen)) {
                 pos = parsed.take();
             } else {
-                fmt::println(
-                    stderr,
-                    "Failed to parse constructed SFEN for startpos?? ({})",
-                    parsed.takeErr().message()
-                );
+                const std::scoped_lock lock{s_printMutex};
+
+                fmt::println(stderr, "Failed to parse constructed SFEN for startpos??");
+                fmt::println(stderr, "SFEN: {}", sfen);
+                fmt::println(stderr, "Error: {}", parsed.takeErr().message());
+
                 return {};
             }
 
