@@ -79,6 +79,10 @@ namespace stoat {
         [[nodiscard]] constexpr Score drawScore(usize nodes) {
             return 2 - static_cast<Score>(nodes % 4);
         }
+
+        [[nodiscard]] constexpr bool isWin(Score score) {
+            return std::abs(score) > kScoreWin;
+        }
     } // namespace
 
     Searcher::Searcher(usize ttSizeMb) :
@@ -798,6 +802,10 @@ namespace stoat {
                 const auto captured = pos.pieceOn(prevCapture.to()).type();
                 thread.history.updateCaptureScore(prevCapture, captured, -bonus);
             }
+        }
+
+        if (bestScore >= beta && !isWin(bestScore) && !isWin(beta)) {
+            bestScore = (bestScore * depth + beta) / (depth + 1);
         }
 
         if (!curr.excluded && (!kRootNode || thread.pvIdx == 0)) {
