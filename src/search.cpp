@@ -34,11 +34,15 @@ namespace stoat {
     namespace {
         constexpr f64 kWideningReportDelay = 1.5;
 
-        constexpr auto kLmpTable = [] {
-            std::array<i32, 32> result{};
+        constexpr usize kLmpTableSize = 32;
 
-            for (i32 depth = 0; depth < result.size(); ++depth) {
-                result[depth] = 4 + 2 * depth * depth;
+        constexpr auto kLmpTable = [] {
+            util::MultiArray<i32, 2, kLmpTableSize> result{};
+
+            for (i32 improving = 0; improving < 2; ++improving) {
+                for (i32 depth = 0; depth < kLmpTableSize; ++depth) {
+                    result[improving][depth] = (4 + 2 * depth * depth) / (2 - improving);
+                }
             }
 
             return result;
@@ -608,7 +612,7 @@ namespace stoat {
             const auto history = pos.isCapture(move) ? 0 : thread.history.mainNonCaptureScore(move);
 
             if (!kRootNode && bestScore > -kScoreWin && (!kPvNode || !thread.datagen)) {
-                if (legalMoves >= kLmpTable[std::min<usize>(depth, kLmpTable.size() - 1)]) {
+                if (legalMoves >= kLmpTable[improving][std::min<usize>(depth, kLmpTableSize - 1)]) {
                     generator.skipNonCaptures();
                 }
 
