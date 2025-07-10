@@ -638,24 +638,28 @@ namespace stoat {
 
             i32 extension{};
 
-            if (!kRootNode && depth >= 7 && ply < thread.rootDepth * 2 && move == ttMove && !curr.excluded
-                && ttEntry.depth >= depth - 3 && ttEntry.flag != tt::Flag::kUpperBound)
-            {
-                const auto sBeta = std::max(-kScoreInf + 1, ttEntry.score - depth * 4 / 3);
-                const auto sDepth = (depth - 1) / 2;
+            if (!kRootNode && ply < thread.rootDepth * 2 && move == ttMove && !curr.excluded) {
+                if (depth >= 7 && ttEntry.depth >= depth - 3 && ttEntry.flag != tt::Flag::kUpperBound) {
+                    const auto sBeta = std::max(-kScoreInf + 1, ttEntry.score - depth * 4 / 3);
+                    const auto sDepth = (depth - 1) / 2;
 
-                curr.excluded = move;
-                const auto score = search(thread, pos, curr.pv, sDepth, ply, sBeta - 1, sBeta, expectedCutnode);
-                curr.excluded = kNullMove;
+                    curr.excluded = move;
+                    const auto score = search(thread, pos, curr.pv, sDepth, ply, sBeta - 1, sBeta, expectedCutnode);
+                    curr.excluded = kNullMove;
 
-                if (score < sBeta) {
+                    if (score < sBeta) {
+                        extension = 1;
+                    } else if (sBeta >= beta) {
+                        return sBeta;
+                    } else if (ttEntry.score >= beta) {
+                        extension = -1;
+                    } else if (expectedCutnode) {
+                        extension = -1;
+                    }
+                } else if (depth <= 7 && !pos.isInCheck() && curr.staticEval <= alpha - 26
+                           && ttEntry.flag == tt::Flag::kLowerBound)
+                {
                     extension = 1;
-                } else if (sBeta >= beta) {
-                    return sBeta;
-                } else if (ttEntry.score >= beta) {
-                    extension = -1;
-                } else if (expectedCutnode) {
-                    extension = -1;
                 }
             }
 
