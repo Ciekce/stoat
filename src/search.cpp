@@ -372,8 +372,12 @@ namespace stoat {
 
                 Score score;
 
+                i32 reduction{};
+
                 while (true) {
-                    score = search<true, true>(thread, thread.rootPos, rootPv, depth, 0, alpha, beta, false);
+                    const auto rootDepth = std::max(depth - reduction, 1);
+
+                    score = search<true, true>(thread, thread.rootPos, rootPv, rootDepth, 0, alpha, beta, false);
 
                     std::stable_sort(
                         thread.rootMoves.begin() + thread.pvIdx,
@@ -397,8 +401,10 @@ namespace stoat {
                     }
 
                     if (score <= alpha) {
+                        reduction = 0;
                         alpha = std::max(score - window, -kScoreInf);
                     } else { // score >= beta
+                        reduction = std::min(reduction + 1, 3);
                         beta = std::min(score + window, kScoreInf);
                     }
 
