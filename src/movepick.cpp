@@ -52,7 +52,7 @@ namespace stoat {
                         continue;
                     }
 
-                    if (see::see(m_pos, move, 0)) {
+                    if (see::see(m_pos, move, -m_scores[idx] / 4)) {
                         return move;
                     }
 
