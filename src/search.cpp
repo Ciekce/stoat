@@ -548,6 +548,8 @@ namespace stoat {
                                 : eval::correctedStaticEval(pos, thread.nnueState, thread.correctionHistory);
         }
 
+        const bool ttPv = ttEntry.pv || kPvNode;
+
         const auto complexity = [&] {
             if (ttEntry.flag == tt::Flag::kExact                                             //
                 || ttEntry.flag == tt::Flag::kUpperBound && ttEntry.score <= curr.staticEval //
@@ -574,7 +576,7 @@ namespace stoat {
             return true;
         }();
 
-        if (!kPvNode && !pos.isInCheck() && !curr.excluded && complexity <= 20) {
+        if (!ttPv && !pos.isInCheck() && !curr.excluded && complexity <= 20) {
             if (depth <= 10 && curr.staticEval - 80 * (depth - improving) >= beta) {
                 return curr.staticEval;
             }
@@ -845,7 +847,7 @@ namespace stoat {
             }
 
             if (!kRootNode || thread.pvIdx == 0) {
-                m_ttable.put(pos.key(), bestScore, bestMove, depth, ply, ttFlag);
+                m_ttable.put(pos.key(), bestScore, bestMove, depth, ply, ttFlag, ttPv);
             }
         }
 

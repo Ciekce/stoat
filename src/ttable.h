@@ -40,6 +40,7 @@ namespace stoat::tt {
         i32 depth{};
         Move move{};
         Flag flag{};
+        bool pv;
     };
 
     class TTable {
@@ -51,7 +52,7 @@ namespace stoat::tt {
         bool finalize();
 
         bool probe(ProbedEntry& dst, u64 key, i32 ply) const;
-        void put(u64 key, Score score, Move move, i32 depth, i32 ply, Flag flag);
+        void put(u64 key, Score score, Move move, i32 depth, i32 ply, Flag flag, bool pv);
 
         inline void age() {
             m_age = (m_age + 1) % Entry::kAgeCycle;
@@ -67,26 +68,30 @@ namespace stoat::tt {
 
     private:
         struct alignas(8) Entry {
-            static constexpr u32 kAgeBits = 6;
+            static constexpr u32 kAgeBits = 5;
             static constexpr u32 kAgeCycle = 1 << kAgeBits;
 
             u16 key;
             i16 score;
             Move move;
             u8 depth;
-            u8 ageFlag;
+            u8 agePvFlag;
 
             [[nodiscard]] inline u32 age() const {
-                return static_cast<u32>(ageFlag >> 2);
+                return static_cast<u32>(agePvFlag >> 3);
+            }
+
+            [[nodiscard]] inline bool pv() const {
+                return agePvFlag & 0b100;
             }
 
             [[nodiscard]] inline Flag flag() const {
-                return static_cast<Flag>(ageFlag & 0x3);
+                return static_cast<Flag>(agePvFlag & 0x3);
             }
 
-            inline void setAgeFlag(u32 age, Flag flag) {
+            inline void setAgePvFlag(u32 age, bool pv, Flag flag) {
                 assert(age < (1 << kAgeBits));
-                ageFlag = (age << 2) | static_cast<u32>(flag);
+                agePvFlag = (age << 3) | (static_cast<u32>(pv) << 2) | static_cast<u32>(flag);
             }
         };
 
