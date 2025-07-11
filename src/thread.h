@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "core.h"
+#include "correction.h"
 #include "eval/nnue.h"
 #include "history.h"
 #include "position.h"
@@ -107,6 +108,7 @@ namespace stoat {
         i32 depthCompleted{};
 
         HistoryTables history{};
+        CorrectionHistoryTable correctionHistory{};
 
         eval::nnue::NnueState nnueState{};
 

@@ -156,19 +156,38 @@ namespace stoat {
 
     void PositionKeys::clear() {
         all = 0;
+        castle = 0;
     }
 
     void PositionKeys::flipPiece(Piece piece, Square sq) {
         assert(piece);
         assert(sq);
-        all ^= keys::pieceSquare(piece, sq);
+
+        const auto key = keys::pieceSquare(piece, sq);
+
+        all ^= key;
+
+        if (piece.type() == PieceTypes::kKing || piece.type() == PieceTypes::kSilver
+            || piece.type() == PieceTypes::kGold)
+        {
+            castle ^= key;
+        }
     }
 
     void PositionKeys::movePiece(Piece piece, Square from, Square to) {
         assert(piece);
         assert(from);
         assert(to);
-        all ^= keys::pieceSquare(piece, from) ^ keys::pieceSquare(piece, to);
+
+        const auto key = keys::pieceSquare(piece, from) ^ keys::pieceSquare(piece, to);
+
+        all ^= key;
+
+        if (piece.type() == PieceTypes::kKing || piece.type() == PieceTypes::kSilver
+            || piece.type() == PieceTypes::kGold)
+        {
+            castle ^= key;
+        }
     }
 
     void PositionKeys::flipStm() {
@@ -179,6 +198,7 @@ namespace stoat {
         assert(c);
         assert(pt);
         assert(count <= maxPiecesInHand(pt));
+
         all ^= keys::pieceInHand(c, pt, count);
     }
 
@@ -187,6 +207,7 @@ namespace stoat {
         assert(pt);
         assert(before <= maxPiecesInHand(pt));
         assert(after <= maxPiecesInHand(pt));
+
         all ^= keys::pieceInHand(c, pt, before) ^ keys::pieceInHand(c, pt, after);
     }
 

@@ -29,7 +29,7 @@ add_executable(stoat-native src/3rdparty/fmt/src/format.cc src/main.cpp src/type
 	src/datagen/format/stoatpack.h src/datagen/format/stoatpack.cpp src/datagen/format/stoatformat.h
 	src/datagen/format/stoatformat.cpp src/util/u4array.h src/datagen/datagen.h src/datagen/datagen.cpp src/util/ctrlc.h
 	src/util/ctrlc.cpp src/eval/arch.h src/eval/nnue.h src/eval/nnue.cpp src/history.h src/history.cpp src/stats.h
-	src/stats.cpp
+	src/stats.cpp src/correction.h
 )
 
 target_include_directories(stoat-native PUBLIC src/3rdparty/fmt/include)

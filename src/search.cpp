@@ -107,6 +107,7 @@ namespace stoat {
 
         for (auto& thread : m_threads) {
             thread.history.clear();
+            thread.correctionHistory.clear();
         }
     }
 
@@ -518,7 +519,7 @@ namespace stoat {
         }
 
         if (ply >= kMaxDepth) {
-            return pos.isInCheck() ? 0 : eval::staticEval(pos, thread.nnueState);
+            return pos.isInCheck() ? 0 : eval::correctedStaticEval(pos, thread.nnueState, thread.correctionHistory);
         }
 
         auto& curr = thread.stack[ply];
@@ -542,7 +543,9 @@ namespace stoat {
                 --depth;
             }
 
-            curr.staticEval = pos.isInCheck() ? kScoreNone : eval::staticEval(pos, thread.nnueState);
+            curr.staticEval = pos.isInCheck()
+                                ? kScoreNone
+                                : eval::correctedStaticEval(pos, thread.nnueState, thread.correctionHistory);
         }
 
         const auto complexity = [&] {
@@ -832,8 +835,18 @@ namespace stoat {
             bestScore = (bestScore * depth + beta) / (depth + 1);
         }
 
-        if (!curr.excluded && (!kRootNode || thread.pvIdx == 0)) {
-            m_ttable.put(pos.key(), bestScore, bestMove, depth, ply, ttFlag);
+        if (!curr.excluded) {
+            if (!pos.isInCheck() && (bestMove.isNull() || !pos.isCapture(bestMove))
+                && (ttFlag == tt::Flag::kExact                                        //
+                    || ttFlag == tt::Flag::kUpperBound && bestScore < curr.staticEval //
+                    || ttFlag == tt::Flag::kLowerBound && bestScore > curr.staticEval))
+            {
+                thread.correctionHistory.update(pos, depth, bestScore, curr.staticEval);
+            }
+
+            if (!kRootNode || thread.pvIdx == 0) {
+                m_ttable.put(pos.key(), bestScore, bestMove, depth, ply, ttFlag);
+            }
         }
 
         return bestScore;
@@ -861,7 +874,7 @@ namespace stoat {
         }
 
         if (ply >= kMaxDepth) {
-            return pos.isInCheck() ? 0 : eval::staticEval(pos, thread.nnueState);
+            return pos.isInCheck() ? 0 : eval::correctedStaticEval(pos, thread.nnueState, thread.correctionHistory);
         }
 
         Score staticEval;
@@ -869,7 +882,7 @@ namespace stoat {
         if (pos.isInCheck()) {
             staticEval = -kScoreMate + ply;
         } else {
-            staticEval = eval::staticEval(pos, thread.nnueState);
+            staticEval = eval::correctedStaticEval(pos, thread.nnueState, thread.correctionHistory);
 
             if (staticEval >= beta) {
                 return staticEval;

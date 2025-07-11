@@ -30,4 +30,14 @@ namespace stoat::eval {
         const auto nnue = nnue::evaluateOnce(pos);
         return std::clamp(nnue, -kScoreWin + 1, kScoreWin - 1);
     }
+
+    Score correctedStaticEval(
+        const Position& pos,
+        const nnue::NnueState& nnueState,
+        const CorrectionHistoryTable& correction
+    ) {
+        auto eval = staticEval(pos, nnueState);
+        eval = correction.correct(pos, eval);
+        return std::clamp(eval, -kScoreWin + 1, kScoreWin - 1);
+    }
 } // namespace stoat::eval
