@@ -39,14 +39,12 @@ namespace stoat {
             m_castleTable[pos.stm().idx()][pos.castleKey() % kEntries].update(bonus);
         }
 
-        [[nodiscard]] inline Score correct(const Position& pos, Score score) const {
+        [[nodiscard]] inline i32 correction(const Position& pos) const {
             i32 correction{};
 
             correction += m_castleTable[pos.stm().idx()][pos.castleKey() % kEntries];
 
-            score += correction / 16;
-
-            return std::clamp(score, -kScoreWin + 1, kScoreWin - 1);
+            return correction / 16;
         }
 
     private:

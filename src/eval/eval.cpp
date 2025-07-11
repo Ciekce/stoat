@@ -34,10 +34,10 @@ namespace stoat::eval {
     Score correctedStaticEval(
         const Position& pos,
         const nnue::NnueState& nnueState,
-        const CorrectionHistoryTable& correction
+        const CorrectionHistoryTable& corrhist
     ) {
-        auto eval = staticEval(pos, nnueState);
-        eval = correction.correct(pos, eval);
-        return std::clamp(eval, -kScoreWin + 1, kScoreWin - 1);
+        const auto eval = staticEval(pos, nnueState);
+        const auto correction = corrhist.correction(pos);
+        return std::clamp(eval + correction, -kScoreWin + 1, kScoreWin - 1);
     }
 } // namespace stoat::eval
