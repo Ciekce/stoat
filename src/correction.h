@@ -30,22 +30,11 @@
 namespace stoat {
     class CorrectionHistoryTable {
     public:
-        inline void clear() {
-            std::memset(&m_castleTable, 0, sizeof(m_castleTable));
-        }
+        void clear();
 
-        inline void update(const Position& pos, i32 depth, Score searchScore, Score staticEval) {
-            const auto bonus = std::clamp((searchScore - staticEval) * depth / 8, -kMaxBonus, kMaxBonus);
-            m_castleTable[pos.stm().idx()][pos.castleKey() % kEntries].update(bonus);
-        }
+        void update(const Position& pos, i32 depth, Score searchScore, Score staticEval);
 
-        [[nodiscard]] inline i32 correction(const Position& pos) const {
-            i32 correction{};
-
-            correction += m_castleTable[pos.stm().idx()][pos.castleKey() % kEntries];
-
-            return correction / 16;
-        }
+        [[nodiscard]] i32 correction(const Position& pos) const;
 
     private:
         static constexpr usize kEntries = 16384;
