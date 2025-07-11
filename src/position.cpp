@@ -156,7 +156,7 @@ namespace stoat {
 
     void PositionKeys::clear() {
         all = 0;
-        castle = 0;
+        blackCastle = 0;
     }
 
     void PositionKeys::flipPiece(Piece piece, Square sq) {
@@ -170,7 +170,11 @@ namespace stoat {
         if (piece.type() == PieceTypes::kKing || piece.type() == PieceTypes::kSilver
             || piece.type() == PieceTypes::kGold)
         {
-            castle ^= key;
+            if (piece.color() == Colors::kBlack) {
+                blackCastle ^= key;
+            } else {
+                whiteCastle ^= key;
+            }
         }
     }
 
@@ -186,7 +190,11 @@ namespace stoat {
         if (piece.type() == PieceTypes::kKing || piece.type() == PieceTypes::kSilver
             || piece.type() == PieceTypes::kGold)
         {
-            castle ^= key;
+            if (piece.color() == Colors::kBlack) {
+                blackCastle ^= key;
+            } else {
+                whiteCastle ^= key;
+            }
         }
     }
 

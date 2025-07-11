@@ -20,18 +20,22 @@
 
 namespace stoat {
     void CorrectionHistoryTable::clear() {
-        std::memset(&m_castleTable, 0, sizeof(m_castleTable));
+        std::memset(&m_blackCastleTable, 0, sizeof(m_blackCastleTable));
+        std::memset(&m_whiteCastleTable, 0, sizeof(m_whiteCastleTable));
     }
 
     void CorrectionHistoryTable::update(const Position& pos, i32 depth, Score searchScore, Score staticEval) {
         const auto bonus = std::clamp((searchScore - staticEval) * depth / 8, -kMaxBonus, kMaxBonus);
-        m_castleTable[pos.stm().idx()][pos.castleKey() % kEntries].update(bonus);
+
+        m_blackCastleTable[pos.stm().idx()][pos.blackCastleKey() % kEntries].update(bonus);
+        m_whiteCastleTable[pos.stm().idx()][pos.whiteCastleKey() % kEntries].update(bonus);
     }
 
     i32 CorrectionHistoryTable::correction(const Position& pos) const {
         i32 correction{};
 
-        correction += m_castleTable[pos.stm().idx()][pos.castleKey() % kEntries];
+        correction += m_blackCastleTable[pos.stm().idx()][pos.blackCastleKey() % kEntries];
+        correction += m_whiteCastleTable[pos.stm().idx()][pos.whiteCastleKey() % kEntries];
 
         return correction / 16;
     }
