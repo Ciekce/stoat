@@ -45,7 +45,7 @@ namespace stoat::datagen {
         constexpr usize kBaseRandomMoves = 7;
         constexpr bool kRandomizeStartSide = true;
 
-        constexpr usize kSoftNodes = 7000;
+        constexpr usize kSoftNodes = 15000;
         constexpr usize kHardNodes = 8388608;
 
         std::mutex s_printMutex{};
