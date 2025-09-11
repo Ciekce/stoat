@@ -901,7 +901,7 @@ namespace stoat {
         }
 
         if (bestMove) {
-            const auto historyDepth = depth + (curr.staticEval <= bestScore);
+            const auto historyDepth = depth + (!pos.isInCheck() && curr.staticEval <= bestScore);
             const auto bonus = historyBonus(historyDepth);
 
             if (!pos.isCapture(bestMove)) {
