@@ -457,6 +457,8 @@ namespace stoat {
 
                     if (score <= alpha) {
                         reduction = 0;
+
+                        beta = (alpha + beta) / 2;
                         alpha = std::max(score - window, -kScoreInf);
                     } else { // score >= beta
                         reduction = std::min(reduction + 1, 3);
