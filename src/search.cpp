@@ -798,6 +798,7 @@ namespace stoat {
                 r += !improving;
                 r -= history / 8192;
                 r += expectedCutnode * 3;
+                r += ttPv && ttHit && ttEntry.score <= alpha;
 
                 if (pos.isCapture(move)) {
                     r -= 1 + (see::pieceValue(pos.pieceOn(move.to()).type()) + 150) / 250;
