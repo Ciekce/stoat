@@ -88,6 +88,7 @@ namespace stoat {
         }
 
         score += conthistScore(continuations, ply, pos, move, 1);
+        score += conthistScore(continuations, ply, pos, move, 2);
         score += conthistScore(continuations, ply, pos, move, 3);
 
         return score;
@@ -107,6 +108,7 @@ namespace stoat {
         }
 
         updateConthist(continuations, ply, pos, move, bonus, 1);
+        updateConthist(continuations, ply, pos, move, bonus, 2);
         updateConthist(continuations, ply, pos, move, bonus, 3);
     }
 
