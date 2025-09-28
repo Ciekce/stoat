@@ -88,6 +88,7 @@ namespace stoat {
         }
 
         score += conthistScore(continuations, ply, pos, move, 1);
+        score += conthistScore(continuations, ply, pos, move, 3);
 
         return score;
     }
@@ -106,6 +107,7 @@ namespace stoat {
         }
 
         updateConthist(continuations, ply, pos, move, bonus, 1);
+        updateConthist(continuations, ply, pos, move, bonus, 3);
     }
 
     i32 HistoryTables::captureScore(Move move, PieceType captured) const {
