@@ -91,6 +91,9 @@ $(EXE): $(EVALFILE) $(SOURCES)
 
 native: $(EXE)
 
+bench: native
+	./$(EXE)$(if $(NO_EXE_SET),-native)$(SUFFIX) bench
+
 sanitizer: $(EVALFILE) $(SOURCES)
 	$(call build,NATIVE,SANITIZER,native)
 
