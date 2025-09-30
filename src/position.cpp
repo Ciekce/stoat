@@ -158,6 +158,9 @@ namespace stoat {
         all = 0;
         castle = 0;
         cavalry = 0;
+        hand = 0;
+        kpr = 0;
+        ksb = 0;
     }
 
     void PositionKeys::flipPiece(Piece piece, Square sq) {
@@ -172,11 +175,25 @@ namespace stoat {
             || piece.type() == PieceTypes::kGold)
         {
             castle ^= key;
-        } else if (piece.type() == PieceTypes::kKnight || piece.type() == PieceTypes::kBishop
-                   || piece.type() == PieceTypes::kRook || piece.type() == PieceTypes::kPromotedBishop
-                   || piece.type() == PieceTypes::kPromotedRook)
+        }
+        if (piece.type() == PieceTypes::kKnight || piece.type() == PieceTypes::kBishop
+            || piece.type() == PieceTypes::kRook || piece.type() == PieceTypes::kPromotedBishop
+            || piece.type() == PieceTypes::kPromotedRook)
         {
             cavalry ^= key;
+        }
+        if (piece.type() == PieceTypes::kKing) {
+            hand ^= key;
+        }
+        if (piece.type() == PieceTypes::kKing || piece.type() == PieceTypes::kPawn || piece.type() == PieceTypes::kRook
+            || piece.type() == PieceTypes::kPromotedRook)
+        {
+            kpr ^= key;
+        }
+        if (piece.type() == PieceTypes::kKing || piece.type() == PieceTypes::kSilver
+            || piece.type() == PieceTypes::kBishop || piece.type() == PieceTypes::kPromotedBishop)
+        {
+            ksb ^= key;
         }
     }
 
@@ -193,11 +210,25 @@ namespace stoat {
             || piece.type() == PieceTypes::kGold)
         {
             castle ^= key;
-        } else if (piece.type() == PieceTypes::kKnight || piece.type() == PieceTypes::kBishop
-                   || piece.type() == PieceTypes::kRook || piece.type() == PieceTypes::kPromotedBishop
-                   || piece.type() == PieceTypes::kPromotedRook)
+        }
+        if (piece.type() == PieceTypes::kKnight || piece.type() == PieceTypes::kBishop
+            || piece.type() == PieceTypes::kRook || piece.type() == PieceTypes::kPromotedBishop
+            || piece.type() == PieceTypes::kPromotedRook)
         {
             cavalry ^= key;
+        }
+        if (piece.type() == PieceTypes::kKing) {
+            hand ^= key;
+        }
+        if (piece.type() == PieceTypes::kKing || piece.type() == PieceTypes::kPawn || piece.type() == PieceTypes::kRook
+            || piece.type() == PieceTypes::kPromotedRook)
+        {
+            kpr ^= key;
+        }
+        if (piece.type() == PieceTypes::kKing || piece.type() == PieceTypes::kSilver
+            || piece.type() == PieceTypes::kBishop || piece.type() == PieceTypes::kPromotedBishop)
+        {
+            ksb ^= key;
         }
     }
 
@@ -213,9 +244,9 @@ namespace stoat {
         const auto key = keys::pieceInHand(c, pt, count);
 
         all ^= key;
+        hand ^= key;
 
-        if (pt == PieceTypes::kKnight || pt == PieceTypes::kBishop || pt == PieceTypes::kRook)
-        {
+        if (pt == PieceTypes::kKnight || pt == PieceTypes::kBishop || pt == PieceTypes::kRook) {
             cavalry ^= key;
         }
     }
@@ -229,9 +260,9 @@ namespace stoat {
         const auto key = keys::pieceInHand(c, pt, before) ^ keys::pieceInHand(c, pt, after);
 
         all ^= key;
+        hand ^= key;
 
-        if (pt == PieceTypes::kKnight || pt == PieceTypes::kBishop || pt == PieceTypes::kRook)
-        {
+        if (pt == PieceTypes::kKnight || pt == PieceTypes::kBishop || pt == PieceTypes::kRook) {
             cavalry ^= key;
         }
     }
@@ -344,8 +375,11 @@ namespace stoat {
         return key;
     }
 
-    SennichiteStatus Position::testSennichite(bool cuteChessWorkaround, std::span<const u64> keyHistory, i32 limit)
-        const {
+    SennichiteStatus Position::testSennichite(
+        bool cuteChessWorkaround,
+        std::span<const u64> keyHistory,
+        i32 limit
+    ) const {
         const auto end = std::max(0, static_cast<i32>(keyHistory.size()) - limit - 1);
 
         i32 repetitions = 1;
@@ -1130,8 +1164,10 @@ namespace stoat {
     }
 } // namespace stoat
 
-fmt::format_context::iterator fmt::formatter<stoat::Position>::format(const stoat::Position& value, format_context& ctx)
-    const {
+fmt::format_context::iterator fmt::formatter<stoat::Position>::format(
+    const stoat::Position& value,
+    format_context& ctx
+) const {
     using namespace stoat;
 
     format_to(ctx.out(), "   9   8   7   6   5   4   3   2   1\n");
