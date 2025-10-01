@@ -233,7 +233,12 @@ namespace stoat {
         const auto key = keys::pieceInHand(c, pt, count);
 
         all ^= key;
-        hand ^= key;
+
+        if (pt == PieceTypes::kSilver || pt == PieceTypes::kGold || pt == PieceTypes::kBishop
+            || pt == PieceTypes::kRook)
+        {
+            hand ^= key;
+        }
 
         if (pt == PieceTypes::kKnight || pt == PieceTypes::kBishop || pt == PieceTypes::kRook) {
             cavalry ^= key;
