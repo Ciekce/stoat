@@ -823,6 +823,10 @@ namespace stoat {
 
             if (kPvNode && (legalMoves == 1 || score > alpha)) {
                 score = -search<true>(thread, newPos, curr.pv, newDepth, ply + 1, -beta, -alpha, false);
+                if (!pos.isCapture(move) && score >= beta) {
+                    const auto bonus = historyBonus(newDepth);
+                    thread.history.updateNonCaptureConthistScore(thread.conthist, ply, pos, move, bonus);
+                }
             }
 
         skipSearch:

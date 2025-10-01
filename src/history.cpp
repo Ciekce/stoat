@@ -107,6 +107,16 @@ namespace stoat {
             m_nonCaptureNonDrop[move.isPromo()][move.from().idx()][move.to().idx()].update(bonus);
         }
 
+        updateNonCaptureConthistScore(continuations, ply, pos, move, bonus);
+    }
+
+    void HistoryTables::updateNonCaptureConthistScore(
+        std::span<ContinuationSubtable*> continuations,
+        i32 ply,
+        const Position& pos,
+        Move move,
+        HistoryScore bonus
+    ) {
         updateConthist(continuations, ply, pos, move, bonus, 1);
         updateConthist(continuations, ply, pos, move, bonus, 2);
         updateConthist(continuations, ply, pos, move, bonus, 3);

@@ -56,7 +56,7 @@ namespace stoat {
     public:
         //TODO take two args when c++23 is usable
         inline HistoryScore operator[](std::pair<const Position&, Move> ctx) const {
-            const auto [pos, move] = std::move(ctx);
+            const auto [pos, move] = ctx;
             if (move.isDrop()) {
                 return m_data[true][move.dropPiece().withColor(pos.stm()).idx()][move.to().idx()];
             } else {
@@ -65,7 +65,7 @@ namespace stoat {
         }
 
         inline HistoryEntry& operator[](std::pair<const Position&, Move> ctx) {
-            const auto [pos, move] = std::move(ctx);
+            const auto [pos, move] = ctx;
             if (move.isDrop()) {
                 return m_data[true][move.dropPiece().withColor(pos.stm()).idx()][move.to().idx()];
             } else {
@@ -112,6 +112,14 @@ namespace stoat {
         ) const;
 
         void updateNonCaptureScore(
+            std::span<ContinuationSubtable*> continuations,
+            i32 ply,
+            const Position& pos,
+            Move move,
+            HistoryScore bonus
+        );
+
+        void updateNonCaptureConthistScore(
             std::span<ContinuationSubtable*> continuations,
             i32 ply,
             const Position& pos,
