@@ -34,6 +34,7 @@ add_executable(stoat-native src/3rdparty/fmt/src/format.cc src/main.cpp src/type
 
 target_include_directories(stoat-native PUBLIC src/3rdparty/fmt/include)
 target_compile_options(stoat-native PUBLIC -march=native $<$<CONFIG:Release>:-flto>)
+target_link_options(stoat-native PUBLIC -fuse-ld=lld)
 target_compile_definitions(stoat-native PUBLIC ST_NATIVE ST_VERSION=${CMAKE_PROJECT_VERSION}
 	ST_NETWORK_FILE="${PROJECT_SOURCE_DIR}/${ST_DEFAULT_NET_NAME}.nnue")
 
