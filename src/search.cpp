@@ -816,6 +816,10 @@ namespace stoat {
 
                 if (score > alpha && reduced < newDepth) {
                     score = -search(thread, newPos, curr.pv, newDepth, ply + 1, -alpha - 1, -alpha, !expectedCutnode);
+                    if (!pos.isCapture(move) && score >= beta) {
+                        const auto bonus = historyBonus(newDepth);
+                        thread.history.updateNonCaptureConthistScore(thread.conthist, ply, pos, move, bonus);
+                    }
                 }
             } else if (!kPvNode || legalMoves > 1) {
                 score = -search(thread, newPos, curr.pv, newDepth, ply + 1, -alpha - 1, -alpha, !expectedCutnode);
@@ -823,10 +827,6 @@ namespace stoat {
 
             if (kPvNode && (legalMoves == 1 || score > alpha)) {
                 score = -search<true>(thread, newPos, curr.pv, newDepth, ply + 1, -beta, -alpha, false);
-                if (!pos.isCapture(move) && score >= beta) {
-                    const auto bonus = historyBonus(newDepth);
-                    thread.history.updateNonCaptureConthistScore(thread.conthist, ply, pos, move, bonus);
-                }
             }
 
         skipSearch:
