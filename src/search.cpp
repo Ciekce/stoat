@@ -710,7 +710,7 @@ namespace stoat {
                     generator.skipNonCaptures();
                 }
 
-                const auto seeThreshold = pos.isCapture(move) ? -100 * depth * depth : -20 * depth * depth;
+                const auto seeThreshold = pos.isCapture(move) ? -77 * depth * depth : -15 * depth * depth;
                 if (!see::see(pos, move, seeThreshold)) {
                     continue;
                 }
@@ -1001,7 +1001,7 @@ namespace stoat {
             }
 
             if (bestScore > -kScoreWin) {
-                if (!see::see(pos, move, -100)) {
+                if (!see::see(pos, move, -77)) {
                     continue;
                 }
 
