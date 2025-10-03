@@ -26,18 +26,18 @@
 namespace stoat::see {
     namespace values {
         constexpr i32 kPawn = 100;
-        constexpr i32 kPromotedPawn = 300;
-        constexpr i32 kLance = 400;
-        constexpr i32 kKnight = 500;
-        constexpr i32 kPromotedLance = 550;
-        constexpr i32 kPromotedKnight = 600;
-        constexpr i32 kSilver = 650;
-        constexpr i32 kPromotedSilver = 700;
-        constexpr i32 kGold = 800;
-        constexpr i32 kBishop = 1100;
-        constexpr i32 kRook = 1300;
-        constexpr i32 kPromotedBishop = 1500;
-        constexpr i32 kPromotedRook = 1700;
+        constexpr i32 kPromotedPawn = 292;
+        constexpr i32 kLance = 267;
+        constexpr i32 kKnight = 374;
+        constexpr i32 kPromotedLance = 347;
+        constexpr i32 kPromotedKnight = 418;
+        constexpr i32 kSilver = 595;
+        constexpr i32 kPromotedSilver = 637;
+        constexpr i32 kGold = 759;
+        constexpr i32 kBishop = 825;
+        constexpr i32 kRook = 1033;
+        constexpr i32 kPromotedBishop = 999;
+        constexpr i32 kPromotedRook = 1294;
         constexpr i32 kKing = 0;
     } // namespace values
 
