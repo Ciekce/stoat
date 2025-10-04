@@ -18,7 +18,7 @@
 
 #include "correction.h"
 
-#include <bit>
+#include <cmath>
 
 namespace stoat {
     void CorrectionHistory::clear() {
@@ -34,8 +34,10 @@ namespace stoat {
     ) {
         auto& tables = m_tables[pos.stm().idx()];
 
+        const double factor = 1.0 + std::log2(complexity + 1) / 8.0;
+
         const auto bonus = std::clamp(
-            (searchScore - staticEval) * depth / 8 * std::max(std::bit_width(static_cast<u32>(complexity)) / 2, 1),
+            static_cast<int>((searchScore - staticEval) * depth / 8 * factor),
             -kMaxBonus,
             kMaxBonus
         );
