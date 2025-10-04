@@ -18,15 +18,27 @@
 
 #include "correction.h"
 
+#include <bit>
+
 namespace stoat {
     void CorrectionHistory::clear() {
         std::memset(&m_tables, 0, sizeof(m_tables));
     }
 
-    void CorrectionHistory::update(const Position& pos, i32 depth, Score searchScore, Score staticEval) {
+    void CorrectionHistory::update(
+        const Position& pos,
+        i32 depth,
+        Score searchScore,
+        Score staticEval,
+        i32 complexity
+    ) {
         auto& tables = m_tables[pos.stm().idx()];
 
-        const auto bonus = std::clamp((searchScore - staticEval) * depth / 8, -kMaxBonus, kMaxBonus);
+        const auto bonus = std::clamp(
+            (searchScore - staticEval) * depth / 8 * std::max(std::bit_width(static_cast<u32>(complexity)) / 2, 1),
+            -kMaxBonus,
+            kMaxBonus
+        );
 
         tables.castle[pos.castleKey() % kEntries].update(bonus);
         tables.cavalry[pos.cavalryKey() % kEntries].update(bonus);
