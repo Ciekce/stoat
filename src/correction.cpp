@@ -37,7 +37,7 @@ namespace stoat {
         const double factor = 1.0 + std::log2(complexity + 1) / 10.0;
 
         const auto bonus = std::clamp(
-            static_cast<int>((searchScore - staticEval) * depth / 8 * factor),
+            static_cast<i32>((searchScore - staticEval) * depth / 8 * factor),
             -kMaxBonus,
             kMaxBonus
         );
