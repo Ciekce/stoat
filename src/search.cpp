@@ -118,8 +118,16 @@ namespace stoat {
             return false;
         }
 
-        [[nodiscard]] constexpr f64 complexityFactor(i32 complexity) {
-            return 1.0 + std::log2(complexity + 1) / 10.0;
+        [[nodiscard]] constexpr f64 complexityFactor(i32 complexity, f64 divisor) {
+            return 1.0 + std::log2(complexity + 1) / divisor;
+        }
+
+        [[nodiscard]] constexpr f64 historyComplexityFactor(i32 complexity) {
+            return complexityFactor(complexity, 8.0);
+        }
+
+        [[nodiscard]] constexpr f64 corrhistComplexityFactor(i32 complexity) {
+            return complexityFactor(complexity, 10.0);
         }
     } // namespace
 
@@ -618,7 +626,6 @@ namespace stoat {
             }
             return 0;
         }();
-        const auto factor = complexityFactor(complexity);
 
         const auto ttMove =
             (kRootNode && thread.rootDepth > 1) ? thread.rootMoves[thread.pvIdx].pv.moves[0] : ttEntry.move;
@@ -822,7 +829,7 @@ namespace stoat {
                 if (score > alpha && reduced < newDepth) {
                     score = -search(thread, newPos, curr.pv, newDepth, ply + 1, -alpha - 1, -alpha, !expectedCutnode);
                     if (!pos.isCapture(move) && score >= beta) {
-                        const auto bonus = historyBonus(newDepth, factor);
+                        const auto bonus = historyBonus(newDepth, historyComplexityFactor(complexity));
                         thread.history.updateNonCaptureConthistScore(thread.conthist, ply, pos, move, bonus);
                     }
                 }
@@ -911,7 +918,7 @@ namespace stoat {
 
         if (bestMove) {
             const auto historyDepth = depth + (!pos.isInCheck() && curr.staticEval <= bestScore);
-            const auto bonus = historyBonus(historyDepth, factor);
+            const auto bonus = historyBonus(historyDepth, historyComplexityFactor(complexity));
 
             if (!pos.isCapture(bestMove)) {
                 thread.history.updateNonCaptureScore(thread.conthist, ply, pos, bestMove, bonus);
@@ -940,7 +947,7 @@ namespace stoat {
                     || ttFlag == tt::Flag::kUpperBound && bestScore < curr.staticEval //
                     || ttFlag == tt::Flag::kLowerBound && bestScore > curr.staticEval))
             {
-                thread.corrhist.update(pos, depth, bestScore, curr.staticEval, factor);
+                thread.corrhist.update(pos, depth, bestScore, curr.staticEval, corrhistComplexityFactor(complexity));
             }
 
             if (!kRootNode || thread.pvIdx == 0) {
