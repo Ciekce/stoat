@@ -127,7 +127,7 @@ namespace stoat {
         }
 
         [[nodiscard]] constexpr f64 corrhistComplexityFactor(i32 complexity) {
-            return complexityFactor(complexity, 2.5, 0.015);
+            return complexityFactor(complexity, 2.5, 0.008);
         }
     } // namespace
 
