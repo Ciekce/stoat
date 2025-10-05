@@ -117,6 +117,10 @@ namespace stoat {
 
             return false;
         }
+
+        [[nodiscard]] constexpr f64 complexityFactor(i32 complexity) {
+            return 1.0 + std::log2(complexity + 1) / 10.0;
+        }
     } // namespace
 
     Searcher::Searcher(usize ttSizeMb) :
@@ -614,6 +618,7 @@ namespace stoat {
             }
             return 0;
         }();
+        const auto factor = complexityFactor(complexity);
 
         const auto ttMove =
             (kRootNode && thread.rootDepth > 1) ? thread.rootMoves[thread.pvIdx].pv.moves[0] : ttEntry.move;
@@ -817,7 +822,7 @@ namespace stoat {
                 if (score > alpha && reduced < newDepth) {
                     score = -search(thread, newPos, curr.pv, newDepth, ply + 1, -alpha - 1, -alpha, !expectedCutnode);
                     if (!pos.isCapture(move) && score >= beta) {
-                        const auto bonus = historyBonus(newDepth, complexity);
+                        const auto bonus = historyBonus(newDepth, factor);
                         thread.history.updateNonCaptureConthistScore(thread.conthist, ply, pos, move, bonus);
                     }
                 }
@@ -906,7 +911,7 @@ namespace stoat {
 
         if (bestMove) {
             const auto historyDepth = depth + (!pos.isInCheck() && curr.staticEval <= bestScore);
-            const auto bonus = historyBonus(historyDepth, complexity);
+            const auto bonus = historyBonus(historyDepth, factor);
 
             if (!pos.isCapture(bestMove)) {
                 thread.history.updateNonCaptureScore(thread.conthist, ply, pos, bestMove, bonus);
@@ -935,7 +940,7 @@ namespace stoat {
                     || ttFlag == tt::Flag::kUpperBound && bestScore < curr.staticEval //
                     || ttFlag == tt::Flag::kLowerBound && bestScore > curr.staticEval))
             {
-                thread.corrhist.update(pos, depth, bestScore, curr.staticEval, complexity);
+                thread.corrhist.update(pos, depth, bestScore, curr.staticEval, factor);
             }
 
             if (!kRootNode || thread.pvIdx == 0) {
