@@ -118,16 +118,16 @@ namespace stoat {
             return false;
         }
 
-        [[nodiscard]] constexpr f64 complexityFactor(i32 complexity, f64 divisor) {
-            return 1.0 + std::log2(complexity + 1) / divisor;
+        [[nodiscard]] constexpr f64 complexityFactor(i32 complexity, f64 maxMultiplier, f64 scale) {
+            return 1.0 + (maxMultiplier - 1.0) * (1.0 - std::exp(-complexity * scale));
         }
 
         [[nodiscard]] constexpr f64 historyComplexityFactor(i32 complexity) {
-            return complexityFactor(complexity, 12.0);
+            return complexityFactor(complexity, 3.0, 0.01);
         }
 
         [[nodiscard]] constexpr f64 corrhistComplexityFactor(i32 complexity) {
-            return complexityFactor(complexity, 10.0);
+            return complexityFactor(complexity, 2.5, 0.015);
         }
     } // namespace
 
