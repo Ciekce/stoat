@@ -51,7 +51,7 @@ namespace stoat::eval::nnue {
             alignas(64) util::MultiArray<i32, kL2Size> l1Biases;
             alignas(64) util::MultiArray<i32, kL2Size * 2, kL3Size> l2Weights;
             alignas(64) util::MultiArray<i32, kL3Size> l2Biases;
-            alignas(64) util::MultiArray<i32, kL3Size> l3Weights;
+            alignas(64) util::MultiArray<i32, kL3Size + kL2Size> l3Weights;
             alignas(64) i32 l3Bias;
         };
 
@@ -101,6 +101,7 @@ namespace stoat::eval::nnue {
 
             alignas(64) std::array<u8, kL1Size> ftOut;
             alignas(64) std::array<i32, kL2Size * 2> l1Out;
+            alignas(64) std::array<i32, kL2Size> res;
             alignas(64) std::array<i32, kL3Size> l2Out;
 
             const auto zero = _mm256_setzero_si256();
@@ -205,6 +206,10 @@ namespace stoat::eval::nnue {
                 out = _mm256_srai_epi32(out, -kL1Shift);
                 out = _mm256_add_epi32(out, biases);
 
+                auto skipped = out;
+                skipped = _mm256_slli_epi32(skipped, kQBits * 3);
+                store(&res[i], skipped);
+
                 auto crelu = out;
                 auto screlu = out;
 
@@ -287,6 +292,20 @@ namespace stoat::eval::nnue {
                 out_1 = _mm256_add_epi32(out_1, i_1);
                 out_2 = _mm256_add_epi32(out_2, i_2);
                 out_3 = _mm256_add_epi32(out_3, i_3);
+            }
+
+            for (usize inputIdx = 0; inputIdx < kL2Size; inputIdx += kChunkSize32 * 2) {
+                auto i_0 = load(&res[inputIdx + kChunkSize32 * 0]);
+                auto i_1 = load(&res[inputIdx + kChunkSize32 * 1]);
+
+                const auto w_0 = load(&s_network.l3Weights[kL3Size + inputIdx + kChunkSize32 * 0]);
+                const auto w_1 = load(&s_network.l3Weights[kL3Size + inputIdx + kChunkSize32 * 1]);
+
+                i_0 = _mm256_mullo_epi32(i_0, w_0);
+                i_1 = _mm256_mullo_epi32(i_1, w_1);
+
+                out_0 = _mm256_add_epi32(out_0, i_0);
+                out_1 = _mm256_add_epi32(out_1, i_1);
             }
 
             const auto s0 = _mm256_add_epi32(out_0, out_1);
