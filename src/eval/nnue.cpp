@@ -207,7 +207,7 @@ namespace stoat::eval::nnue {
                 out = _mm256_add_epi32(out, biases);
 
                 auto skipped = out;
-                skipped = _mm256_slli_epi32(skipped, kQBits * 3);
+                skipped = _mm256_slli_epi32(skipped, kQBits * 2);
                 store(&res[i], skipped);
 
                 auto crelu = out;
