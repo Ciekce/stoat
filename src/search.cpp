@@ -597,6 +597,7 @@ namespace stoat {
                                          pos,
                                          thread.nnueState,
                                          thread.corrhist,
+                                         thread.contMoves,
                                          ply,
                                          corrhistApplyComplexityFactor(prevComplexity)
                                      );
@@ -628,6 +629,7 @@ namespace stoat {
                                                     pos,
                                                     thread.nnueState,
                                                     thread.corrhist,
+                                                    thread.contMoves,
                                                     ply,
                                                     corrhistApplyComplexityFactor(prevComplexity)
                                                 );
@@ -995,7 +997,15 @@ namespace stoat {
                     || ttFlag == tt::Flag::kUpperBound && bestScore < curr.staticEval //
                     || ttFlag == tt::Flag::kLowerBound && bestScore > curr.staticEval))
             {
-                thread.corrhist.update(pos, depth, bestScore, curr.staticEval, corrhistUpdateComplexityFactor(complexity));
+                thread.corrhist.update(
+                    pos,
+                    thread.contMoves,
+                    ply,
+                    depth,
+                    bestScore,
+                    curr.staticEval,
+                    corrhistUpdateComplexityFactor(complexity)
+                );
             }
 
             if (!kRootNode || thread.pvIdx == 0) {
@@ -1028,7 +1038,9 @@ namespace stoat {
         }
 
         if (ply >= kMaxDepth) {
-            return pos.isInCheck() ? 0 : eval::correctedStaticEval(pos, thread.nnueState, thread.corrhist, ply, 1.0);
+            return pos.isInCheck()
+                     ? 0
+                     : eval::correctedStaticEval(pos, thread.nnueState, thread.corrhist, thread.contMoves, ply, 1.0);
         }
 
         Score staticEval;
@@ -1036,7 +1048,7 @@ namespace stoat {
         if (pos.isInCheck()) {
             staticEval = -kScoreMate + ply;
         } else {
-            staticEval = eval::correctedStaticEval(pos, thread.nnueState, thread.corrhist, ply, 1.0);
+            staticEval = eval::correctedStaticEval(pos, thread.nnueState, thread.corrhist, thread.contMoves, ply, 1.0);
 
             if (staticEval >= beta) {
                 return staticEval;

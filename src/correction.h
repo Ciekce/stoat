@@ -28,13 +28,26 @@
 #include "util/multi_array.h"
 
 namespace stoat {
+    struct PlayedMove {
+        Move move;
+        Piece piece; // dropped piece for drops, moving piece otherwise
+    };
+
     class CorrectionHistory {
     public:
         void clear();
 
-        void update(const Position& pos, i32 depth, Score searchScore, Score staticEval, f64 complexityFactor);
+        void update(
+            const Position& pos,
+            std::span<PlayedMove> moves,
+            i32 ply,
+            i32 depth,
+            Score searchScore,
+            Score staticEval,
+            f64 complexityFactor
+        );
 
-        [[nodiscard]] i32 correction(const Position& pos) const;
+        [[nodiscard]] i32 correction(const Position& pos, std::span<PlayedMove> moves, i32 ply) const;
 
     private:
         static constexpr usize kEntries = 16384;
@@ -54,11 +67,14 @@ namespace stoat {
             }
         };
 
+        using ContSubtable = util::MultiArray<Entry, 2, Pieces::kCount, Squares::kCount>;
+
         struct SidedTables {
             std::array<Entry, kEntries> castle{};
             std::array<Entry, kEntries> cavalry{};
             std::array<Entry, kEntries> hand{};
             std::array<Entry, kEntries> kpr{};
+            util::MultiArray<ContSubtable, 2, Pieces::kCount, Squares::kCount> cont{};
         };
 
         std::array<SidedTables, 2> m_tables{};

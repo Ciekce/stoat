@@ -26,6 +26,7 @@ namespace stoat {
 
         stack.resize(kMaxDepth + 1);
         conthist.resize(kMaxDepth + 1);
+        contMoves.resize(kMaxDepth + 1);
     }
 
     void ThreadData::reset(const Position& newRootPos, std::span<const u64> newKeyHistory) {
@@ -44,6 +45,14 @@ namespace stoat {
         stack[ply].move = move;
         conthist[ply] = &history.contTable(pos, move);
 
+        contMoves[ply].move = move;
+
+        if (move.isDrop()) {
+            contMoves[ply].piece = move.dropPiece().withColor(pos.stm());
+        } else {
+            contMoves[ply].piece = pos.pieceOn(move.from());
+        }
+
         keyHistory.push_back(pos.key());
 
         return std::pair<Position, ThreadPosGuard<true>>{
@@ -56,6 +65,8 @@ namespace stoat {
     std::pair<Position, ThreadPosGuard<false>> ThreadData::applyNullMove(i32 ply, const Position& pos) {
         stack[ply].move = kNullMove;
         conthist[ply] = nullptr;
+
+        contMoves[ply].move = kNullMove;
 
         keyHistory.push_back(pos.key());
 
