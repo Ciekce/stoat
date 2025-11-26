@@ -11,18 +11,31 @@ ifndef EVALFILE
     NO_EVALFILE_SET = true
 endif
 
-SOURCES := src/3rdparty/fmt/src/format.cc src/main.cpp src/position.cpp src/util/split.cpp src/movegen.cpp src/perft.cpp src/util/timer.cpp src/attacks/sliders/bmi2.cpp src/protocol/handler.cpp src/protocol/uci_like.cpp src/protocol/usi.cpp src/protocol/uci.cpp src/search.cpp src/eval/eval.cpp src/limit.cpp src/bench.cpp src/thread.cpp src/attacks/sliders/black_magic.cpp src/ttable.cpp src/movepick.cpp src/see.cpp src/datagen/format/stoatpack.cpp src/datagen/format/stoatformat.cpp src/datagen/datagen.cpp src/util/ctrlc.cpp src/eval/nnue.cpp src/history.cpp src/stats.cpp src/correction.cpp
+TYPE = native
 
-SUFFIX :=
+# https://stackoverflow.com/a/1825832
+rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
+
+override SOURCES_3RDPARTY := 3rdparty/fmt/src/format.cc
+
+override HEADERS := $(call rwildcard,src,*.h)
+override SOURCES := $(call rwildcard,src,*.cpp)
+
+# Sources including 3rdparty
+override SOURCES_ALL := $(SOURCES) $(SOURCES_3RDPARTY)
 
 CXX := clang++
 
-CXXFLAGS := -Isrc/3rdparty/fmt/include -std=c++20 -flto -Wall -Wextra -Wno-sign-compare -fconstexpr-steps=4194304 -DST_NETWORK_FILE=\"$(EVALFILE)\" -DST_VERSION=$(VERSION)
+CXXFLAGS := -I3rdparty/fmt/include -std=c++20 -flto -Wall -Wextra -Wno-sign-compare -fconstexpr-steps=4194304 -DST_NETWORK_FILE=\"$(EVALFILE)\" -DST_VERSION=$(VERSION)
 
 CXXFLAGS_RELEASE := -O3 -DNDEBUG
 CXXFLAGS_SANITIZER := -O1 -g -fsanitize=address -fsanitize=undefined
 
 CXXFLAGS_NATIVE := -DST_NATIVE -march=native
+
+ifdef NO_EXE_SET
+    override EXE := $(EXE)-$(TYPE)
+endif
 
 LDFLAGS :=
 
@@ -37,13 +50,16 @@ ifeq (, $(findstring clang,$(COMPILER_VERSION)))
 endif
 
 ifeq ($(OS), Windows_NT)
-    DETECTED_OS := Windows
-    SUFFIX := .exe
-    RM := del
+    override DETECTED_OS := Windows
+    override SUFFIX := .exe
+    override MKDIR := mkdir
+    override RM := del
 else
-    DETECTED_OS := $(shell uname -s)
+    override DETECTED_OS := $(shell uname -s)
+    override SUFFIX :=
+    override MKDIR := mkdir -p
+    override RM := rm
     LDFLAGS += -pthread
-    RM := rm
 endif
 
 ifneq (, $(findstring clang,$(COMPILER_VERSION)))
@@ -64,19 +80,47 @@ ifneq ($(findstring __BMI2__, $(ARCH_DEFINES)),)
     endif
 endif
 
+override OUTFILE = $(subst .exe,,$(EXE))$(SUFFIX)
+
+ifeq ($(TYPE), native)
+    CXXFLAGS += $(CXXFLAGS_NATIVE) $(CXXFLAGS_RELEASE)
+    BUILD_DIR = build-native
+else ifeq ($(TYPE), sanitizer)
+    CXXFLAGS += $(CXXFLAGS_NATIVE) $(CXXFLAGS_SANITIZER)
+    BUILD_DIR = build-sanitizer
+else
+    $(error Unknown build type)
+endif
+
+override OBJECTS := $(addprefix $(BUILD_DIR)/,$(filter %.o,$(SOURCES_ALL:.cpp=.o) $(SOURCES_ALL:.cc=.o)))
+
+ifeq ($(DETECTED_OS),Windows)
+define create_mkdir_target
+$1:
+	-$(MKDIR) $(subst /,\,$(patsubst %/,%,$1))
+
+.PRECIOUS: $1
+endef
+else
+define create_mkdir_target
+$1:
+	$(MKDIR) $1
+
+.PRECIOUS: $1
+endef
+endif
+
+$(foreach dir,$(sort $(dir $(OBJECTS))),$(eval $(call create_mkdir_target,$(dir))))
+
 ifeq ($(COMMIT_HASH),on)
     CXXFLAGS += -DST_COMMIT_HASH=$(shell git log -1 --pretty=format:%h)
 endif
 
-define build
-    $(CXX) $(CXXFLAGS) $(CXXFLAGS_$1) $(CXXFLAGS_$2) $(LDFLAGS) -o $(EXE)$(if $(NO_EXE_SET),-$3)$(SUFFIX) $(filter-out $(EVALFILE),$^)
-endef
-
-all: native
+all: $(OUTFILE)
 
 .PHONY: all
 
-.DEFAULT_GOAL := native
+.DEFAULT_GOAL := $(OUTFILE)
 
 ifdef NO_EVALFILE_SET
 $(EVALFILE):
@@ -86,16 +130,20 @@ $(EVALFILE):
 download-net: $(EVALFILE)
 endif
 
-$(EXE): $(EVALFILE) $(SOURCES)
-	$(call build,NATIVE,RELEASE,native)
+.SECONDEXPANSION:
 
-native: $(EXE)
+$(BUILD_DIR)/%.o: %.cpp | $$(@D)/
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-bench: native
-	./$(EXE)$(if $(NO_EXE_SET),-native)$(SUFFIX) bench
+$(BUILD_DIR)/%.o: %.cc | $$(@D)/
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-sanitizer: $(EVALFILE) $(SOURCES)
-	$(call build,NATIVE,SANITIZER,native)
+$(OUTFILE): $(OBJECTS) $(EVALFILE)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $(OUTFILE) $(OBJECTS)
 
-clean:
+bench: $(OUTFILE)
+	./$(OUTFILE) bench
+
+format: $(HEADERS) $(SOURCES)
+	clang-format -i $^
 

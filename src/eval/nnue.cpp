@@ -29,7 +29,7 @@
 #endif
 
 #define INCBIN_PREFIX g_
-#include "../3rdparty/incbin.h"
+#include "../../3rdparty/incbin.h"
 
 #ifdef ST_MSVC
     #pragma pop_macro("_MSC_VER")

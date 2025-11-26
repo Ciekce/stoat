@@ -21,7 +21,7 @@ endif()
 
 option(ST_FAST_PEXT "whether pext and pdep are usably fast on this architecture" ON)
 
-add_executable(stoat-native src/3rdparty/fmt/src/format.cc src/main.cpp src/types.h src/core.h src/bitboard.h
+add_executable(stoat-native 3rdparty/fmt/src/format.cc src/main.cpp src/types.h src/core.h src/bitboard.h
 	src/util/bits.h src/position.h src/position.cpp src/util/result.h src/util/split.h src/util/split.cpp
 	src/util/parse.h src/move.h src/util/string_map.h src/attacks/attacks.h src/util/multi_array.h src/movegen.h
 	src/util/static_vector.h src/movegen.cpp src/perft.h src/perft.cpp src/util/timer.h src/util/timer.cpp src/arch.h
@@ -38,7 +38,7 @@ add_executable(stoat-native src/3rdparty/fmt/src/format.cc src/main.cpp src/type
 	src/stats.cpp src/correction.h src/correction.cpp
 )
 
-target_include_directories(stoat-native PUBLIC src/3rdparty/fmt/include)
+target_include_directories(stoat-native PUBLIC 3rdparty/fmt/include)
 target_compile_options(stoat-native PUBLIC -march=native $<$<CONFIG:Release>:-flto>)
 target_link_options(stoat-native PUBLIC -fuse-ld=lld)
 target_compile_definitions(stoat-native PUBLIC ST_NATIVE ST_VERSION=${CMAKE_PROJECT_VERSION}
