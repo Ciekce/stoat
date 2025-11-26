@@ -50,7 +50,7 @@ namespace stoat::util {
         bool m_high;
 
         template <usize kSize>
-        friend class U4Array;
+        friend struct U4Array;
     };
 
     template <usize kSize>

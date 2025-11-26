@@ -13,6 +13,12 @@ if(MSVC AND NOT ST_CLANG)
 	message(FATAL_ERROR Stoat does not support building with MSVC)
 endif()
 
+if(MSVC)
+	add_compile_options(/EHsc /W4 /clang:-Wno-sign-compare /WX)
+else()
+	add_compile_options(-Wall -Wextra -Wno-sign-compare -Werror)
+endif()
+
 option(ST_FAST_PEXT "whether pext and pdep are usably fast on this architecture" ON)
 
 add_executable(stoat-native src/3rdparty/fmt/src/format.cc src/main.cpp src/types.h src/core.h src/bitboard.h

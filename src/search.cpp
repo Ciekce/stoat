@@ -582,15 +582,15 @@ namespace stoat {
         const auto* parent = kRootNode ? nullptr : &thread.stack[ply - 1];
 
         tt::ProbedEntry ttEntry{};
-        bool ttHit = false;
+        [[maybe_unused]] bool ttHit = false;
 
         if (!curr.excluded) {
             ttHit = m_ttable.probe(ttEntry, pos.key(), ply);
 
             if (!kPvNode && ttEntry.depth >= depth
-                && (ttEntry.flag == tt::Flag::kExact                                   //
-                    || ttEntry.flag == tt::Flag::kUpperBound && ttEntry.score <= alpha //
-                    || ttEntry.flag == tt::Flag::kLowerBound && ttEntry.score >= beta))
+                && (ttEntry.flag == tt::Flag::kExact                                     //
+                    || (ttEntry.flag == tt::Flag::kUpperBound && ttEntry.score <= alpha) //
+                    || (ttEntry.flag == tt::Flag::kLowerBound && ttEntry.score >= beta)))
             {
                 return ttEntry.score;
             }
@@ -606,9 +606,9 @@ namespace stoat {
         const bool ttPv = ttEntry.pv || kPvNode;
 
         const auto complexity = [&] {
-            if (ttEntry.flag == tt::Flag::kExact                                             //
-                || ttEntry.flag == tt::Flag::kUpperBound && ttEntry.score <= curr.staticEval //
-                || ttEntry.flag == tt::Flag::kLowerBound && ttEntry.score >= curr.staticEval)
+            if (ttEntry.flag == tt::Flag::kExact                                               //
+                || (ttEntry.flag == tt::Flag::kUpperBound && ttEntry.score <= curr.staticEval) //
+                || (ttEntry.flag == tt::Flag::kLowerBound && ttEntry.score >= curr.staticEval))
             {
                 return std::abs(curr.staticEval - ttEntry.score);
             }
@@ -934,9 +934,9 @@ namespace stoat {
 
         if (!curr.excluded) {
             if (!pos.isInCheck() && (bestMove.isNull() || !pos.isCapture(bestMove))
-                && (ttFlag == tt::Flag::kExact                                        //
-                    || ttFlag == tt::Flag::kUpperBound && bestScore < curr.staticEval //
-                    || ttFlag == tt::Flag::kLowerBound && bestScore > curr.staticEval))
+                && (ttFlag == tt::Flag::kExact                                          //
+                    || (ttFlag == tt::Flag::kUpperBound && bestScore < curr.staticEval) //
+                    || (ttFlag == tt::Flag::kLowerBound && bestScore > curr.staticEval)))
             {
                 thread.corrhist.update(pos, depth, bestScore, curr.staticEval, complexity);
             }

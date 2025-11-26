@@ -445,7 +445,7 @@ namespace stoat {
                 str = str.substr(1);
             }
 
-            if (str.length() != 1 && str.length() != 2 || str.length() == 2 && str[0] != '+') {
+            if ((str.length() != 1 && str.length() != 2) || (str.length() == 2 && str[0] != '+')) {
                 return Piece{kNoneId};
             }
 

@@ -33,9 +33,9 @@ namespace stoat::limit {
     public:
         virtual ~ISearchLimiter() = default;
 
-        virtual void addMoveNodes(Move move, usize nodes) {}
+        virtual void addMoveNodes([[maybe_unused]] Move move, [[maybe_unused]] usize nodes) {}
 
-        virtual void update(i32 depth, Move bestMove) {}
+        virtual void update([[maybe_unused]] i32 depth, [[maybe_unused]] Move bestMove) {}
 
         [[nodiscard]] virtual bool stopSoft(usize nodes) = 0;
         [[nodiscard]] virtual bool stopHard(usize nodes) = 0;

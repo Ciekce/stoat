@@ -44,12 +44,5 @@ namespace stoat {
             moves[0] = kNullMove;
             length = 0;
         }
-
-        inline PvList& operator=(const PvList& other) {
-            std::copy(other.moves.begin(), other.moves.begin() + other.length, moves.begin());
-            length = other.length;
-
-            return *this;
-        }
     };
 } // namespace stoat

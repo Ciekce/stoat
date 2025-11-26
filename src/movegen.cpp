@@ -117,7 +117,7 @@ namespace stoat::movegen {
                 dst,
                 pos,
                 pieces,
-                [&](Square sq, Color c, Bitboard occ) { return attackGetter(sq, c); },
+                [&](Square sq, Color c, [[maybe_unused]] Bitboard occ) { return attackGetter(sq, c); },
                 dstMask,
                 nonPromoMask
             );
@@ -136,7 +136,7 @@ namespace stoat::movegen {
                 dst,
                 pos,
                 pieces,
-                [&](Square sq, Color c, Bitboard occ) { return attackGetter(sq, occ); },
+                [&](Square sq, [[maybe_unused]] Color c, Bitboard occ) { return attackGetter(sq, occ); },
                 dstMask,
                 nonPromoMask
             );
@@ -155,7 +155,7 @@ namespace stoat::movegen {
                 dst,
                 pos,
                 pieces,
-                [&](Square sq, Color c, Bitboard occ) { return attackGetter(sq); },
+                [&](Square sq, [[maybe_unused]] Color c, [[maybe_unused]] Bitboard occ) { return attackGetter(sq); },
                 dstMask,
                 nonPromoMask
             );

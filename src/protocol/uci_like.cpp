@@ -410,7 +410,10 @@ namespace stoat::protocol {
             ->startSearch(m_state.pos, m_state.keyHistory, startTime, infinite, maxDepth, std::move(limiter));
     }
 
-    void UciLikeHandler::handle_stop(std::span<std::string_view> args, [[maybe_unused]] util::Instant startTime) {
+    void UciLikeHandler::handle_stop(
+        [[maybe_unused]] std::span<std::string_view> args,
+        [[maybe_unused]] util::Instant startTime
+    ) {
         if (m_state.searcher->isSearching()) {
             m_state.searcher->stop();
         } else {

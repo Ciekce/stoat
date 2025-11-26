@@ -17,7 +17,7 @@ SUFFIX :=
 
 CXX := clang++
 
-CXXFLAGS := -Isrc/3rdparty/fmt/include -std=c++20 -flto -fconstexpr-steps=4194304 -DST_NETWORK_FILE=\"$(EVALFILE)\" -DST_VERSION=$(VERSION)
+CXXFLAGS := -Isrc/3rdparty/fmt/include -std=c++20 -flto -Wall -Wextra -Wno-sign-compare -fconstexpr-steps=4194304 -DST_NETWORK_FILE=\"$(EVALFILE)\" -DST_VERSION=$(VERSION)
 
 CXXFLAGS_RELEASE := -O3 -DNDEBUG
 CXXFLAGS_SANITIZER := -O1 -g -fsanitize=address -fsanitize=undefined

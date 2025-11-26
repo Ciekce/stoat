@@ -52,7 +52,7 @@ namespace stoat::limit {
     MoveTimeLimiter::MoveTimeLimiter(util::Instant startTime, f64 maxTime) :
             m_startTime{startTime}, m_maxTime{maxTime} {}
 
-    bool MoveTimeLimiter::stopSoft(usize nodes) {
+    bool MoveTimeLimiter::stopSoft([[maybe_unused]] usize nodes) {
         return m_startTime.elapsed() >= m_maxTime;
     }
 
@@ -109,7 +109,7 @@ namespace stoat::limit {
         m_scale *= 2.2 - bestMoveNodeFraction * 1.6;
     }
 
-    bool TimeManager::stopSoft(usize nodes) {
+    bool TimeManager::stopSoft([[maybe_unused]] usize nodes) {
         return util::Instant::now() >= m_startTime + m_optTime * m_scale;
     }
 
