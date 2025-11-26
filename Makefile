@@ -3,12 +3,12 @@ DEFAULT_NET := $(file < network.txt)
 
 ifndef EXE
     EXE = stoat-$(VERSION)
-    NO_EXE_SET = true
+    override NO_EXE_SET = true
 endif
 
 ifndef EVALFILE
     EVALFILE = $(DEFAULT_NET).nnue
-    NO_EVALFILE_SET = true
+    override NO_EVALFILE_SET = true
 endif
 
 TYPE = native
@@ -29,7 +29,7 @@ CXX := clang++
 CXXFLAGS := -I3rdparty/fmt/include -std=c++20 -flto -Wall -Wextra -Wno-sign-compare -fconstexpr-steps=4194304 -DST_NETWORK_FILE=\"$(EVALFILE)\" -DST_VERSION=$(VERSION)
 
 CXXFLAGS_RELEASE := -O3 -DNDEBUG
-CXXFLAGS_SANITIZER := -O1 -g -fsanitize=address -fsanitize=undefined
+CXXFLAGS_SANITIZER := -O1 -g -fsanitize=address,undefined
 
 CXXFLAGS_NATIVE := -DST_NATIVE -march=native
 
@@ -49,15 +49,18 @@ ifeq (, $(findstring clang,$(COMPILER_VERSION)))
     endif
 endif
 
+override MKDIR := mkdir -p
+
 ifeq ($(OS), Windows_NT)
     override DETECTED_OS := Windows
     override SUFFIX := .exe
-    override MKDIR := mkdir
     override RM := del
+    ifeq (.exe,$(findstring .exe,$(SHELL)))
+        override MKDIR := -mkdir
+    endif
 else
     override DETECTED_OS := $(shell uname -s)
     override SUFFIX :=
-    override MKDIR := mkdir -p
     override RM := rm
     LDFLAGS += -pthread
 endif
@@ -94,21 +97,12 @@ endif
 
 override OBJECTS := $(addprefix $(BUILD_DIR)/,$(filter %.o,$(SOURCES_ALL:.cpp=.o) $(SOURCES_ALL:.cc=.o)))
 
-ifeq ($(DETECTED_OS),Windows)
 define create_mkdir_target
 $1:
-	-$(MKDIR) $(subst /,\,$(patsubst %/,%,$1))
+	$(MKDIR) "$1"
 
 .PRECIOUS: $1
 endef
-else
-define create_mkdir_target
-$1:
-	$(MKDIR) $1
-
-.PRECIOUS: $1
-endef
-endif
 
 $(foreach dir,$(sort $(dir $(OBJECTS))),$(eval $(call create_mkdir_target,$(dir))))
 
