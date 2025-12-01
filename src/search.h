@@ -173,6 +173,8 @@ namespace stoat {
         void reportSingle(const ThreadData& bestThread, u32 pvIdx, i32 depth, f64 time) const;
 
         void report(const ThreadData& bestThread, i32 depth, f64 time) const;
+
+        const ThreadData& selectThread() const;
         void finalReport(f64 time) const;
     };
 } // namespace stoat

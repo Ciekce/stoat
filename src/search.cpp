@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <unordered_map>
 
 #include "attacks/attacks.h"
 #include "core.h"
@@ -1121,12 +1122,115 @@ namespace stoat {
         }
     }
 
+    const ThreadData& Searcher::selectThread() const {
+        if (m_threadData.size() == 1) {
+            return *m_threadData[0];
+        }
+
+        // Thread selection logic ported from SF
+
+        auto lowestRootScore = kScoreInf;
+
+        for (const auto& thread : m_threadData) {
+            const auto score = thread->pvMove().score;
+            if (score != -kScoreInf && score < lowestRootScore) {
+                lowestRootScore = score;
+            }
+        }
+
+        const auto threadWeight = [&](const ThreadData& thread) {
+            return (thread.pvMove().score - lowestRootScore + 10) * thread.depthCompleted;
+        };
+
+        std::unordered_map<u16, i32> moveVotes{};
+
+        const auto bestMoveVotes = [&](const ThreadData& thread) -> i32& {
+            return moveVotes[thread.pvMove().pv.moves[0].raw()];
+        };
+
+        for (const auto& thread : m_threadData) {
+            if (thread->pvMove().score != -kScoreInf) {
+                bestMoveVotes(*thread) += threadWeight(*thread);
+            }
+        }
+
+        const auto* bestThread = m_threadData[0].get();
+
+        auto bestRootScore = bestThread->pvMove().score;
+        auto bestVotes = bestMoveVotes(*bestThread);
+
+        const auto acceptCandidateThread = [&](const ThreadData* thread) {
+            bestThread = thread;
+            bestRootScore = thread->pvMove().score;
+            bestVotes = bestMoveVotes(*thread);
+        };
+
+        for (usize threadIdx = 1; threadIdx < m_threadData.size(); ++threadIdx) {
+            const auto* thread = m_threadData[threadIdx].get();
+
+            const auto rootScore = thread->pvMove().score;
+
+            if (rootScore == -kScoreInf) {
+                continue;
+            }
+
+            if (bestRootScore == -kScoreInf) {
+                acceptCandidateThread(thread);
+                continue;
+            }
+
+            // if the best thread has a proven win, only take a better win
+            if (bestRootScore > kScoreWin) {
+                if (rootScore > bestRootScore) {
+                    acceptCandidateThread(thread);
+                }
+                continue;
+            }
+
+            // if the best thread has a proven loss, take the candidate if it has a shorter one
+            if (bestRootScore < -kScoreWin) {
+                if (rootScore < -kScoreWin && rootScore < bestRootScore) {
+                    acceptCandidateThread(thread);
+                }
+                continue;
+            }
+
+            // if the best thread has any proven decisive score, take it
+            if (std::abs(rootScore) > kScoreWin) {
+                acceptCandidateThread(thread);
+                continue;
+            }
+
+            const auto votes = bestMoveVotes(*thread);
+
+            // take the move with the most votes
+            if (votes > bestVotes) {
+                acceptCandidateThread(thread);
+                continue;
+            }
+
+            // given moves with equal votes, take the highest weighted thread,
+            //   but avoid truncated PVs from failhighs/lows
+            if (votes == bestVotes
+                && (threadWeight(*thread) * (thread->pvMove().pv.length > 2))
+                       > (threadWeight(*bestThread) * (bestThread->pvMove().pv.length > 2)))
+            {
+                acceptCandidateThread(thread);
+                continue;
+            }
+        }
+
+        fmt::println("info string Selected thread {}", bestThread->id);
+
+        return *bestThread;
+    }
+
     void Searcher::finalReport(f64 time) const {
         if (m_silent) {
             return;
         }
 
-        const auto& bestThread = *m_threadData[0];
+        const auto& bestThread = selectThread();
 
         report(bestThread, bestThread.depthCompleted, time);
         protocol::currHandler().printBestMove(bestThread.pvMove().pv.moves[0]);
