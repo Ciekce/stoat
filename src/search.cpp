@@ -593,6 +593,13 @@ namespace stoat {
                     || (ttEntry.flag == tt::Flag::kUpperBound && ttEntry.score <= alpha) //
                     || (ttEntry.flag == tt::Flag::kLowerBound && ttEntry.score >= beta)))
             {
+                if (ttEntry.score >= beta && ttEntry.move && !pos.isCapture(ttEntry.move)
+                    && pos.isPseudolegal(ttEntry.move))
+                {
+                    const auto bonus = historyBonus(depth);
+                    thread.history.updateNonCaptureScore(thread.conthist, ply, pos, ttEntry.move, bonus);
+                }
+
                 return ttEntry.score;
             }
 
