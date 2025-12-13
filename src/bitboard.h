@@ -474,7 +474,7 @@ struct fmt::formatter<stoat::Bitboard> : fmt::formatter<std::string_view> {
         for (stoat::i32 rank = 8; rank >= 0; --rank) {
             for (stoat::i32 file = 0; file < 9; ++file) {
                 if (file > 0) {
-                    format_to(ctx.out(), " \n");
+                    format_to(ctx.out(), " ");
                 }
 
                 format_to(ctx.out(), "{}", value.getSquare(stoat::Square::fromFileRank(file, rank)) ? '1' : '.');
