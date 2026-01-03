@@ -21,6 +21,7 @@
 #include <algorithm>
 
 #include "attacks/attacks.h"
+#include "rays.h"
 
 namespace stoat::see {
     namespace {
@@ -108,7 +109,15 @@ namespace stoat::see {
         const auto bishops = pos.pieceTypeBb(PieceTypes::kBishop) | pos.pieceTypeBb(PieceTypes::kPromotedBishop);
         const auto rooks = pos.pieceTypeBb(PieceTypes::kRook) | pos.pieceTypeBb(PieceTypes::kPromotedRook);
 
-        auto attackers = pos.allAttackersTo(sq, occ);
+        const auto blackPinned = pos.pinned(Colors::kBlack);
+        const auto whitePinned = pos.pinned(Colors::kWhite);
+
+        const auto blackKingRay = rayIntersecting(pos.kingSq(Colors::kBlack), sq);
+        const auto whiteKingRay = rayIntersecting(pos.kingSq(Colors::kWhite), sq);
+
+        const auto allowed = ~(blackPinned | whitePinned) | (blackPinned & blackKingRay) | (whitePinned & whiteKingRay);
+
+        auto attackers = pos.allAttackersTo(sq, occ) & allowed;
 
         auto curr = stm.flip();
 

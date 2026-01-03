@@ -581,7 +581,7 @@ namespace stoat {
             return false;
         }
 
-        if (m_pinned.getSquare(move.from())) {
+        if (pinned(stm).getSquare(move.from())) {
             const auto pinRay = rayIntersecting(move.from(), stmKing);
             if (!pinRay.getSquare(move.to())) {
                 return false;
@@ -976,31 +976,35 @@ namespace stoat {
     }
 
     void Position::updateSlidingCheckersAndPins() {
-        const auto stm = this->stm();
-        const auto nstm = this->stm().flip();
+        updateSidedSlidingCheckersAndPins(Colors::kBlack);
+        updateSidedSlidingCheckersAndPins(Colors::kWhite);
+    }
 
-        m_pinned = Bitboards::kEmpty;
+    void Position::updateSidedSlidingCheckersAndPins(Color side) {
+        m_pinned[side.idx()] = Bitboards::kEmpty;
 
-        const auto stmKing = kingSq(stm);
+        const auto stmKing = kingSq(side);
 
-        const auto stmOcc = colorBb(stm);
-        const auto nstmOcc = colorBb(nstm);
+        const auto stmOcc = colorBb(side);
+        const auto nstmOcc = colorBb(side.flip());
 
-        const auto nstmLances = pieceBb(PieceTypes::kLance, nstm);
-        const auto nstmBishops = pieceBb(PieceTypes::kBishop, nstm) | pieceBb(PieceTypes::kPromotedBishop, nstm);
-        const auto nstmRooks = pieceBb(PieceTypes::kRook, nstm) | pieceBb(PieceTypes::kPromotedRook, nstm);
+        const auto nstmLances = pieceBb(PieceTypes::kLance, side.flip());
+        const auto nstmBishops =
+            pieceBb(PieceTypes::kBishop, side.flip()) | pieceBb(PieceTypes::kPromotedBishop, side.flip());
+        const auto nstmRooks =
+            pieceBb(PieceTypes::kRook, side.flip()) | pieceBb(PieceTypes::kPromotedRook, side.flip());
 
-        auto potentialAttackers = (attacks::lanceAttacks(stmKing, stm, nstmOcc) & nstmLances)
+        auto potentialAttackers = (attacks::lanceAttacks(stmKing, side, nstmOcc) & nstmLances)
                                 | (attacks::bishopAttacks(stmKing, nstmOcc) & nstmBishops)
                                 | (attacks::rookAttacks(stmKing, nstmOcc) & nstmRooks);
         while (!potentialAttackers.empty()) {
             const auto potentialAttacker = potentialAttackers.popLsb();
             const auto maybePinned = stmOcc & rayBetween(potentialAttacker, stmKing);
 
-            if (maybePinned.empty()) {
+            if (side == stm() && maybePinned.empty()) {
                 m_checkers |= potentialAttacker.bit();
             } else if (maybePinned.one()) {
-                m_pinned |= maybePinned;
+                m_pinned[side.idx()] |= maybePinned;
             }
         }
     }
