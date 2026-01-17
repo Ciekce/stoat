@@ -65,11 +65,11 @@ namespace stoat {
         std::memset(m_capture.data(), 0, sizeof(m_capture));
     }
 
-    i32 HistoryTables::mainNonCaptureScore(Move move) const {
+    i32 HistoryTables::mainNonCaptureScore(const Position& pos, Move move) const {
         if (move.isDrop()) {
-            return m_drop[move.dropPiece().idx()][move.to().idx()];
+            return m_drop[move.dropPiece().withColor(pos.stm()).idx()][move.to().idx()];
         } else {
-            return m_nonCaptureNonDrop[move.isPromo()][move.from().idx()][move.to().idx()];
+            return m_nonCaptureNonDrop[pos.stm().idx()][move.isPromo()][move.from().idx()][move.to().idx()];
         }
     }
 
@@ -82,9 +82,9 @@ namespace stoat {
         i32 score{};
 
         if (move.isDrop()) {
-            score += m_drop[move.dropPiece().idx()][move.to().idx()];
+            score += m_drop[move.dropPiece().withColor(pos.stm()).idx()][move.to().idx()];
         } else {
-            score += m_nonCaptureNonDrop[move.isPromo()][move.from().idx()][move.to().idx()];
+            score += m_nonCaptureNonDrop[pos.stm().idx()][move.isPromo()][move.from().idx()][move.to().idx()];
         }
 
         score += conthistScore(continuations, ply, pos, move, 1);
@@ -102,9 +102,9 @@ namespace stoat {
         HistoryScore bonus
     ) {
         if (move.isDrop()) {
-            m_drop[move.dropPiece().idx()][move.to().idx()].update(bonus);
+            m_drop[move.dropPiece().withColor(pos.stm()).idx()][move.to().idx()].update(bonus);
         } else {
-            m_nonCaptureNonDrop[move.isPromo()][move.from().idx()][move.to().idx()].update(bonus);
+            m_nonCaptureNonDrop[pos.stm().idx()][move.isPromo()][move.from().idx()][move.to().idx()].update(bonus);
         }
 
         updateNonCaptureConthistScore(continuations, ply, pos, move, bonus);
