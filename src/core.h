@@ -817,22 +817,14 @@ namespace stoat {
 
     constexpr auto kMaxInHand = [] {
         const auto round = [](u32 count) { return (std::bit_floor(count) << 1) - 1; };
-
-        std::array<u32, PieceTypes::kCount> offsets{};
-
-        offsets[PieceTypes::kPawn.idx()] = round(18);
-        offsets[PieceTypes::kLance.idx()] = round(4);
-        offsets[PieceTypes::kKnight.idx()] = round(4);
-        offsets[PieceTypes::kSilver.idx()] = round(4);
-        offsets[PieceTypes::kGold.idx()] = round(4);
-        offsets[PieceTypes::kBishop.idx()] = round(2);
-        offsets[PieceTypes::kRook.idx()] = round(2);
+        std::array offsets{round(18), round(4), round(4), round(4), round(2), round(2), round(4)};
 
         return offsets;
     }();
 
     [[nodiscard]] constexpr u32 maxPiecesInHand(PieceType pt) {
         assert(pt);
+        assert(pt.raw() < PieceTypes::kKing.raw());
         return kMaxInHand[pt.idx()];
     }
 
@@ -841,9 +833,9 @@ namespace stoat {
         PieceTypes::kLance,
         PieceTypes::kKnight,
         PieceTypes::kSilver,
-        PieceTypes::kGold,
         PieceTypes::kBishop,
         PieceTypes::kRook,
+        PieceTypes::kGold,
     };
 
     using Score = i32;

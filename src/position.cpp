@@ -72,7 +72,7 @@ namespace stoat {
 
     u32 Hand::count(PieceType pt) const {
         assert(pt);
-        assert(pt < PieceTypes::kKingId);
+        assert(pt.raw() < PieceTypes::kKing.raw());
 
         const auto offset = kHandOffsets[pt.idx()];
         const auto mask = kHandMasks[pt.idx()];
@@ -84,7 +84,7 @@ namespace stoat {
 
     u32 Hand::increment(PieceType pt) {
         assert(pt);
-        assert(pt < PieceTypes::kKingId);
+        assert(pt.raw() < PieceTypes::kKing.raw());
         const auto curr = count(pt);
         assert(curr < (kHandMasks[pt.idx()] >> kHandOffsets[pt.idx()]));
         set(pt, curr + 1);
@@ -93,7 +93,7 @@ namespace stoat {
 
     u32 Hand::decrement(PieceType pt) {
         assert(pt);
-        assert(pt < PieceTypes::kKingId);
+        assert(pt.raw() < PieceTypes::kKing.raw());
         const auto curr = count(pt);
         assert(curr > 0);
         set(pt, curr - 1);
@@ -102,7 +102,7 @@ namespace stoat {
 
     void Hand::set(PieceType pt, u32 count) {
         assert(pt);
-        assert(pt < PieceTypes::kKingId);
+        assert(pt.raw() < PieceTypes::kKing.raw());
 
         const auto offset = kHandOffsets[pt.idx()];
         const auto mask = kHandMasks[pt.idx()];
