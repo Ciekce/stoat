@@ -668,7 +668,9 @@ namespace stoat {
                 }
             }
 
-            if (depth >= 4 && curr.staticEval >= beta + 70 && !parent->move.isNull()) {
+            if (depth >= 4 && curr.staticEval >= beta + 70 && !parent->move.isNull()
+                && !(ttEntry.flag == tt::Flag::kUpperBound && ttEntry.score < beta))
+            {
                 const auto r = 3 + depth / 5;
 
                 const auto [newPos, guard] = thread.applyNullMove(ply, pos);
