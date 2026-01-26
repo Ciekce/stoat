@@ -38,6 +38,7 @@ namespace stoat::tt {
 
     struct ProbedEntry {
         Score score{};
+        Score staticEval{};
         i32 depth{};
         Move move{};
         Flag flag{};
@@ -53,7 +54,7 @@ namespace stoat::tt {
         bool finalize(u32 threadCount = 1);
 
         bool probe(ProbedEntry& dst, u64 key, i32 ply) const;
-        void put(u64 key, Score score, Move move, i32 depth, i32 ply, Flag flag, bool pv);
+        void put(u64 key, Score score, Score staticEval, Move move, i32 depth, i32 ply, Flag flag, bool pv);
 
         inline void age() {
             m_age = (m_age + 1) % Entry::kAgeCycle;
@@ -68,13 +69,14 @@ namespace stoat::tt {
         }
 
     private:
-        struct alignas(8) Entry {
+        struct __attribute__((packed)) Entry {
             static constexpr u32 kAgeBits = 5;
             static constexpr u32 kAgeCycle = 1 << kAgeBits;
 
             u16 key;
             i16 score;
-            Move move;
+            i16 staticEval;
+            u16 move;
             u8 depth;
             u8 agePvFlag;
 
@@ -96,7 +98,7 @@ namespace stoat::tt {
             }
         };
 
-        static_assert(sizeof(Entry) == 8);
+        static_assert(sizeof(Entry) == 10);
 
         static constexpr usize kSmallPageSize = 4096;
         static constexpr auto kDefaultStorageAlignment = std::max(kCacheLineSize, kSmallPageSize);

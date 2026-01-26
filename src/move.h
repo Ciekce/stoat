@@ -87,6 +87,10 @@ namespace stoat {
         constexpr Move& operator=(const Move&) = default;
         constexpr Move& operator=(Move&&) = default;
 
+        [[nodiscard]] static constexpr Move fromRaw(u16 raw) {
+            return Move{raw};
+        }
+
         [[nodiscard]] static constexpr Move makeNormal(Square from, Square to) {
             assert(from);
             assert(to);

@@ -29,10 +29,12 @@ namespace stoat::eval {
     [[nodiscard]] Score staticEval(const Position& pos, const nnue::NnueState& nnueState);
     [[nodiscard]] Score staticEvalOnce(const Position& pos);
 
-    [[nodiscard]] Score correctedStaticEval(
+    [[nodiscard]] Score adjustEval(Score rawEval, const Position& pos, const CorrectionHistory& corrhist, i32 ply);
+
+    [[nodiscard]] Score adjustedEval(
         const Position& pos,
         const nnue::NnueState& nnueState,
         const CorrectionHistory& corrhist,
-        const i32 ply
+        i32 ply
     );
 } // namespace stoat::eval

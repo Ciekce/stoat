@@ -125,7 +125,8 @@ namespace stoat::tt {
 
         if (entry.key == packEntryKey(key)) {
             dst.score = scoreFromTt(static_cast<Score>(entry.score), ply);
-            dst.move = entry.move;
+            dst.staticEval = static_cast<Score>(entry.staticEval);
+            dst.move = Move::fromRaw(entry.move);
             dst.depth = static_cast<i32>(entry.depth);
             dst.flag = entry.flag();
             dst.pv = entry.pv();
@@ -136,7 +137,7 @@ namespace stoat::tt {
         return false;
     }
 
-    void TTable::put(u64 key, Score score, Move move, i32 depth, i32 ply, Flag flag, bool pv) {
+    void TTable::put(u64 key, Score score, [[maybe_unused]] Score staticEval, Move move, i32 depth, i32 ply, Flag flag, bool pv) {
         assert(!m_pendingInit);
 
         assert(depth >= 0);
@@ -155,11 +156,12 @@ namespace stoat::tt {
         }
 
         if (move || entry.key != packedKey) {
-            entry.move = move;
+            entry.move = move.raw();
         }
 
         entry.key = packedKey;
         entry.score = static_cast<i16>(scoreToTt(score, ply));
+        entry.staticEval = static_cast<i16>(staticEval);
         entry.depth = static_cast<u8>(depth);
         entry.setAgePvFlag(m_age, pv, flag);
 
