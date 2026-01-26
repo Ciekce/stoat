@@ -715,14 +715,14 @@ namespace stoat {
                     generator.skipNonCaptures();
                 }
 
-                const auto seeThreshold = pos.isCapture(move) ? -77 * depth * depth : -15 * depth * depth;
-                if (!see::see(pos, move, seeThreshold)) {
-                    continue;
-                }
-
                 if (depth <= 8 && !pos.isInCheck() && alpha < 2000 && !pos.isCapture(move)
                     && curr.staticEval + 150 + 100 * depth <= alpha)
                 {
+                    continue;
+                }
+
+                const auto seeThreshold = pos.isCapture(move) ? -77 * depth * depth : -15 * depth * depth;
+                if (!see::see(pos, move, seeThreshold)) {
                     continue;
                 }
             }
