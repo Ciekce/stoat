@@ -26,37 +26,37 @@
 namespace stoat::see {
     namespace values {
         constexpr i32 kPawn = 100;
-        constexpr i32 kPromotedPawn = 292;
         constexpr i32 kLance = 267;
         constexpr i32 kKnight = 374;
-        constexpr i32 kPromotedLance = 347;
-        constexpr i32 kPromotedKnight = 418;
         constexpr i32 kSilver = 595;
-        constexpr i32 kPromotedSilver = 637;
-        constexpr i32 kGold = 759;
         constexpr i32 kBishop = 825;
         constexpr i32 kRook = 1033;
+        constexpr i32 kGold = 759;
+        constexpr i32 kKing = 0;
+        constexpr i32 kPromotedPawn = 292;
+        constexpr i32 kPromotedLance = 347;
+        constexpr i32 kPromotedKnight = 418;
+        constexpr i32 kPromotedSilver = 637;
         constexpr i32 kPromotedBishop = 999;
         constexpr i32 kPromotedRook = 1294;
-        constexpr i32 kKing = 0;
     } // namespace values
 
     [[nodiscard]] constexpr i32 pieceValue(PieceType pt) {
         constexpr std::array kValues = {
             values::kPawn,
-            values::kPromotedPawn,
             values::kLance,
             values::kKnight,
-            values::kPromotedLance,
-            values::kPromotedKnight,
             values::kSilver,
-            values::kPromotedSilver,
-            values::kGold,
             values::kBishop,
             values::kRook,
+            values::kGold,
+            values::kKing,
+            values::kPromotedPawn,
+            values::kPromotedLance,
+            values::kPromotedKnight,
+            values::kPromotedSilver,
             values::kPromotedBishop,
             values::kPromotedRook,
-            values::kKing,
             0, // none
         };
 

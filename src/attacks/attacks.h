@@ -228,32 +228,32 @@ namespace stoat::attacks {
         switch (pt.raw()) {
             case PieceTypes::kPawn.raw():
                 return pawnAttacks(sq, c);
-            case PieceTypes::kPromotedPawn.raw():
-                return goldAttacks(sq, c);
             case PieceTypes::kLance.raw():
                 return lanceAttacks(sq, c, occ);
             case PieceTypes::kKnight.raw():
                 return knightAttacks(sq, c);
-            case PieceTypes::kPromotedLance.raw():
-                return goldAttacks(sq, c);
-            case PieceTypes::kPromotedKnight.raw():
-                return goldAttacks(sq, c);
             case PieceTypes::kSilver.raw():
                 return silverAttacks(sq, c);
-            case PieceTypes::kPromotedSilver.raw():
-                return goldAttacks(sq, c);
-            case PieceTypes::kGold.raw():
-                return goldAttacks(sq, c);
             case PieceTypes::kBishop.raw():
                 return bishopAttacks(sq, occ);
             case PieceTypes::kRook.raw():
                 return rookAttacks(sq, occ);
+            case PieceTypes::kGold.raw():
+                return goldAttacks(sq, c);
+            case PieceTypes::kKing.raw():
+                return kingAttacks(sq);
+            case PieceTypes::kPromotedPawn.raw():
+                return goldAttacks(sq, c);
+            case PieceTypes::kPromotedLance.raw():
+                return goldAttacks(sq, c);
+            case PieceTypes::kPromotedKnight.raw():
+                return goldAttacks(sq, c);
+            case PieceTypes::kPromotedSilver.raw():
+                return goldAttacks(sq, c);
             case PieceTypes::kPromotedBishop.raw():
                 return promotedBishopAttacks(sq, occ);
             case PieceTypes::kPromotedRook.raw():
                 return promotedRookAttacks(sq, occ);
-            case PieceTypes::kKing.raw():
-                return kingAttacks(sq);
         }
 
         __builtin_unreachable();

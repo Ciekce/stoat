@@ -64,9 +64,9 @@ namespace stoat {
                 PieceTypes::kLance,
                 PieceTypes::kKnight,
                 PieceTypes::kSilver,
-                PieceTypes::kGold,
                 PieceTypes::kBishop,
                 PieceTypes::kRook,
+                PieceTypes::kGold,
             };
 
             assert(isDrop());
@@ -108,30 +108,13 @@ namespace stoat {
         }
 
         [[nodiscard]] static constexpr Move makeDrop(PieceType piece, Square to) {
-            constexpr std::array kDropPieceIndices = {
-                0, // pawn
-                -1,
-                1, // lance
-                2, // knight
-                -1,
-                -1,
-                3, // silver
-                -1,
-                4, // gold
-                5, // bishop
-                6, // rook
-            };
-
             assert(piece);
             assert(!piece.isPromoted());
             assert(piece != PieceTypes::kKing);
             assert(to);
 
-            const auto pieceIdx = kDropPieceIndices[piece.idx()];
-            assert(pieceIdx != -1);
-
             return Move{
-                static_cast<u16>((to.raw() << kToShift) | (pieceIdx << kDropPieceShift) | (1 << kDropFlagShift))
+                static_cast<u16>((to.raw() << kToShift) | (piece.raw() << kDropPieceShift) | (1 << kDropFlagShift))
             };
         }
 

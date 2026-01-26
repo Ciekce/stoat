@@ -103,35 +103,19 @@ namespace stoat {
 
         [[nodiscard]] constexpr bool isPromoted() const {
             assert(m_id <= kNoneId);
-            return m_id == kPromotedPawnId || m_id == kPromotedLanceId || m_id == kPromotedKnightId
-                || m_id == kPromotedSilverId || m_id == kPromotedBishopId || m_id == kPromotedRookId;
+            return m_id > kKingId;
         }
 
         [[nodiscard]] constexpr bool canPromote() const {
             assert(m_id <= kNoneId);
-            return m_id == kPawnId || m_id == kLanceId || m_id == kKnightId || m_id == kSilverId || m_id == kBishopId
-                || m_id == kRookId;
+            return m_id < kGoldId;
         }
 
         [[nodiscard]] constexpr Piece withColor(Color c) const;
 
         [[nodiscard]] constexpr PieceType promoted() const {
-            switch (m_id) {
-                case kPawnId:
-                    return PieceType{kPromotedPawnId};
-                case kLanceId:
-                    return PieceType{kPromotedLanceId};
-                case kKnightId:
-                    return PieceType{kPromotedKnightId};
-                case kSilverId:
-                    return PieceType{kPromotedSilverId};
-                case kBishopId:
-                    return PieceType{kPromotedBishopId};
-                case kRookId:
-                    return PieceType{kPromotedRookId};
-                default:
-                    return PieceType{kNoneId};
-            }
+            assert(canPromote());
+            return fromRaw(m_id + kPromotedPawnId);
         }
 
         [[nodiscard]] constexpr PieceType unpromoted() const {
@@ -157,32 +141,32 @@ namespace stoat {
             switch (m_id) {
                 case kPawnId:
                     return "P";
-                case kPromotedPawnId:
-                    return "+P";
                 case kLanceId:
                     return "L";
                 case kKnightId:
                     return "N";
-                case kPromotedLanceId:
-                    return "+L";
-                case kPromotedKnightId:
-                    return "+N";
                 case kSilverId:
                     return "S";
-                case kPromotedSilverId:
-                    return "+S";
-                case kGoldId:
-                    return "G";
                 case kBishopId:
                     return "B";
                 case kRookId:
                     return "R";
+                case kGoldId:
+                    return "G";
+                case kKingId:
+                    return "K";
+                case kPromotedPawnId:
+                    return "+P";
+                case kPromotedLanceId:
+                    return "+L";
+                case kPromotedKnightId:
+                    return "+N";
+                case kPromotedSilverId:
+                    return "+S";
                 case kPromotedBishopId:
                     return "+B";
                 case kPromotedRookId:
                     return "+R";
-                case kKingId:
-                    return "K";
                 default:
                     return "?";
             }
@@ -203,12 +187,12 @@ namespace stoat {
                     return PieceType{kKnightId};
                 case 'S':
                     return PieceType{kSilverId};
-                case 'G':
-                    return PieceType{kGoldId};
                 case 'B':
                     return PieceType{kBishopId};
                 case 'R':
                     return PieceType{kRookId};
+                case 'G':
+                    return PieceType{kGoldId};
                 case 'K':
                     return PieceType{kKingId};
                 default:
@@ -233,19 +217,19 @@ namespace stoat {
 
         enum : u8 {
             kPawnId = 0,
-            kPromotedPawnId,
             kLanceId,
             kKnightId,
-            kPromotedLanceId,
-            kPromotedKnightId,
             kSilverId,
-            kPromotedSilverId,
-            kGoldId,
             kBishopId,
             kRookId,
+            kGoldId,
+            kKingId,
+            kPromotedPawnId,
+            kPromotedLanceId,
+            kPromotedKnightId,
+            kPromotedSilverId,
             kPromotedBishopId,
             kPromotedRookId,
-            kKingId,
             kNoneId,
         };
 
@@ -256,19 +240,19 @@ namespace stoat {
         PieceTypes() = delete;
 
         static constexpr PieceType kPawn{PieceType::kPawnId};
-        static constexpr PieceType kPromotedPawn{PieceType::kPromotedPawnId};
         static constexpr PieceType kLance{PieceType::kLanceId};
         static constexpr PieceType kKnight{PieceType::kKnightId};
-        static constexpr PieceType kPromotedLance{PieceType::kPromotedLanceId};
-        static constexpr PieceType kPromotedKnight{PieceType::kPromotedKnightId};
         static constexpr PieceType kSilver{PieceType::kSilverId};
-        static constexpr PieceType kPromotedSilver{PieceType::kPromotedSilverId};
-        static constexpr PieceType kGold{PieceType::kGoldId};
         static constexpr PieceType kBishop{PieceType::kBishopId};
         static constexpr PieceType kRook{PieceType::kRookId};
+        static constexpr PieceType kGold{PieceType::kGoldId};
+        static constexpr PieceType kKing{PieceType::kKingId};
+        static constexpr PieceType kPromotedPawn{PieceType::kPromotedPawnId};
+        static constexpr PieceType kPromotedLance{PieceType::kPromotedLanceId};
+        static constexpr PieceType kPromotedKnight{PieceType::kPromotedKnightId};
+        static constexpr PieceType kPromotedSilver{PieceType::kPromotedSilverId};
         static constexpr PieceType kPromotedBishop{PieceType::kPromotedBishopId};
         static constexpr PieceType kPromotedRook{PieceType::kPromotedRookId};
-        static constexpr PieceType kKing{PieceType::kKingId};
         static constexpr PieceType kNone{PieceType::kNoneId};
 
         static constexpr usize kCount = kNone.idx();
@@ -308,7 +292,7 @@ namespace stoat {
 
         [[nodiscard]] constexpr bool isPromoted() const {
             assert(m_id <= kNoneId);
-            return type().isPromoted();
+            return m_id > kWhiteKingId;
         }
 
         [[nodiscard]] constexpr PieceType type() const {
@@ -326,7 +310,7 @@ namespace stoat {
         }
 
         [[nodiscard]] constexpr Piece promoted() const {
-            return type().promoted().withColor(color());
+            return fromRaw(m_id + kBlackPromotedPawnId);
         }
 
         [[nodiscard]] constexpr std::string_view str() const {
@@ -335,10 +319,6 @@ namespace stoat {
                     return "P";
                 case kWhitePawnId:
                     return "p";
-                case kBlackPromotedPawnId:
-                    return "+P";
-                case kWhitePromotedPawnId:
-                    return "+p";
                 case kBlackLanceId:
                     return "L";
                 case kWhiteLanceId:
@@ -347,26 +327,10 @@ namespace stoat {
                     return "N";
                 case kWhiteKnightId:
                     return "n";
-                case kBlackPromotedLanceId:
-                    return "+L";
-                case kWhitePromotedLanceId:
-                    return "+l";
-                case kBlackPromotedKnightId:
-                    return "+N";
-                case kWhitePromotedKnightId:
-                    return "+n";
                 case kBlackSilverId:
                     return "S";
                 case kWhiteSilverId:
                     return "s";
-                case kBlackPromotedSilverId:
-                    return "+S";
-                case kWhitePromotedSilverId:
-                    return "+s";
-                case kBlackGoldId:
-                    return "G";
-                case kWhiteGoldId:
-                    return "g";
                 case kBlackBishopId:
                     return "B";
                 case kWhiteBishopId:
@@ -375,6 +339,30 @@ namespace stoat {
                     return "R";
                 case kWhiteRookId:
                     return "r";
+                case kBlackGoldId:
+                    return "G";
+                case kWhiteGoldId:
+                    return "g";
+                case kBlackKingId:
+                    return "K";
+                case kWhiteKingId:
+                    return "k";
+                case kBlackPromotedPawnId:
+                    return "+P";
+                case kWhitePromotedPawnId:
+                    return "+p";
+                case kBlackPromotedLanceId:
+                    return "+L";
+                case kWhitePromotedLanceId:
+                    return "+l";
+                case kBlackPromotedKnightId:
+                    return "+N";
+                case kWhitePromotedKnightId:
+                    return "+n";
+                case kBlackPromotedSilverId:
+                    return "+S";
+                case kWhitePromotedSilverId:
+                    return "+s";
                 case kBlackPromotedBishopId:
                     return "+B";
                 case kWhitePromotedBishopId:
@@ -383,10 +371,6 @@ namespace stoat {
                     return "+R";
                 case kWhitePromotedRookId:
                     return "+r";
-                case kBlackKingId:
-                    return "K";
-                case kWhiteKingId:
-                    return "k";
                 default:
                     return "?";
             }
@@ -415,10 +399,6 @@ namespace stoat {
                     return Piece{kBlackSilverId};
                 case 's':
                     return Piece{kWhiteSilverId};
-                case 'G':
-                    return Piece{kBlackGoldId};
-                case 'g':
-                    return Piece{kWhiteGoldId};
                 case 'B':
                     return Piece{kBlackBishopId};
                 case 'b':
@@ -427,6 +407,10 @@ namespace stoat {
                     return Piece{kBlackRookId};
                 case 'r':
                     return Piece{kWhiteRookId};
+                case 'G':
+                    return Piece{kBlackGoldId};
+                case 'g':
+                    return Piece{kWhiteGoldId};
                 case 'K':
                     return Piece{kBlackKingId};
                 case 'k':
@@ -476,32 +460,32 @@ namespace stoat {
         enum : u8 {
             kBlackPawnId = 0,
             kWhitePawnId,
-            kBlackPromotedPawnId,
-            kWhitePromotedPawnId,
             kBlackLanceId,
             kWhiteLanceId,
             kBlackKnightId,
             kWhiteKnightId,
-            kBlackPromotedLanceId,
-            kWhitePromotedLanceId,
-            kBlackPromotedKnightId,
-            kWhitePromotedKnightId,
             kBlackSilverId,
             kWhiteSilverId,
-            kBlackPromotedSilverId,
-            kWhitePromotedSilverId,
-            kBlackGoldId,
-            kWhiteGoldId,
             kBlackBishopId,
             kWhiteBishopId,
             kBlackRookId,
             kWhiteRookId,
+            kBlackGoldId,
+            kWhiteGoldId,
+            kBlackKingId,
+            kWhiteKingId,
+            kBlackPromotedPawnId,
+            kWhitePromotedPawnId,
+            kBlackPromotedLanceId,
+            kWhitePromotedLanceId,
+            kBlackPromotedKnightId,
+            kWhitePromotedKnightId,
+            kBlackPromotedSilverId,
+            kWhitePromotedSilverId,
             kBlackPromotedBishopId,
             kWhitePromotedBishopId,
             kBlackPromotedRookId,
             kWhitePromotedRookId,
-            kBlackKingId,
-            kWhiteKingId,
             kNoneId,
         };
 
@@ -520,32 +504,32 @@ namespace stoat {
 
         static constexpr Piece kBlackPawn{Piece::kBlackPawnId};
         static constexpr Piece kWhitePawn{Piece::kWhitePawnId};
-        static constexpr Piece kBlackPromotedPawn{Piece::kBlackPromotedPawnId};
-        static constexpr Piece kWhitePromotedPawn{Piece::kWhitePromotedPawnId};
         static constexpr Piece kBlackLance{Piece::kBlackLanceId};
         static constexpr Piece kWhiteLance{Piece::kWhiteLanceId};
         static constexpr Piece kBlackKnight{Piece::kBlackKnightId};
         static constexpr Piece kWhiteKnight{Piece::kWhiteKnightId};
-        static constexpr Piece kBlackPromotedLance{Piece::kBlackPromotedLanceId};
-        static constexpr Piece kWhitePromotedLance{Piece::kWhitePromotedLanceId};
-        static constexpr Piece kBlackPromotedKnight{Piece::kBlackPromotedKnightId};
-        static constexpr Piece kWhitePromotedKnight{Piece::kWhitePromotedKnightId};
         static constexpr Piece kBlackSilver{Piece::kBlackSilverId};
         static constexpr Piece kWhiteSilver{Piece::kWhiteSilverId};
-        static constexpr Piece kBlackPromotedSilver{Piece::kBlackPromotedSilverId};
-        static constexpr Piece kWhitePromotedSilver{Piece::kWhitePromotedSilverId};
-        static constexpr Piece kBlackGold{Piece::kBlackGoldId};
-        static constexpr Piece kWhiteGold{Piece::kWhiteGoldId};
         static constexpr Piece kBlackBishop{Piece::kBlackBishopId};
         static constexpr Piece kWhiteBishop{Piece::kWhiteBishopId};
         static constexpr Piece kBlackRook{Piece::kBlackRookId};
         static constexpr Piece kWhiteRook{Piece::kWhiteRookId};
+        static constexpr Piece kBlackGold{Piece::kBlackGoldId};
+        static constexpr Piece kWhiteGold{Piece::kWhiteGoldId};
+        static constexpr Piece kBlackKing{Piece::kBlackKingId};
+        static constexpr Piece kWhiteKing{Piece::kWhiteKingId};
+        static constexpr Piece kBlackPromotedPawn{Piece::kBlackPromotedPawnId};
+        static constexpr Piece kWhitePromotedPawn{Piece::kWhitePromotedPawnId};
+        static constexpr Piece kBlackPromotedLance{Piece::kBlackPromotedLanceId};
+        static constexpr Piece kWhitePromotedLance{Piece::kWhitePromotedLanceId};
+        static constexpr Piece kBlackPromotedKnight{Piece::kBlackPromotedKnightId};
+        static constexpr Piece kWhitePromotedKnight{Piece::kWhitePromotedKnightId};
+        static constexpr Piece kBlackPromotedSilver{Piece::kBlackPromotedSilverId};
+        static constexpr Piece kWhitePromotedSilver{Piece::kWhitePromotedSilverId};
         static constexpr Piece kBlackPromotedBishop{Piece::kBlackPromotedBishopId};
         static constexpr Piece kWhitePromotedBishop{Piece::kWhitePromotedBishopId};
         static constexpr Piece kBlackPromotedRook{Piece::kBlackPromotedRookId};
         static constexpr Piece kWhitePromotedRook{Piece::kWhitePromotedRookId};
-        static constexpr Piece kBlackKing{Piece::kBlackKingId};
-        static constexpr Piece kWhiteKing{Piece::kWhiteKingId};
         static constexpr Piece kNone{Piece::kNoneId};
 
         static constexpr usize kCount = kNone.idx();
