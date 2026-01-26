@@ -997,7 +997,15 @@ namespace stoat {
             rawEval = kScoreNone;
             staticEval = -kScoreMate + ply;
         } else {
-            rawEval = eval::staticEval(pos, thread.nnueState);
+            tt::ProbedEntry ttEntry{};
+            const bool ttHit = m_ttable.probe(ttEntry, pos.key(), ply);
+
+            if (ttHit && ttEntry.staticEval != kScoreNone) {
+                rawEval = ttEntry.staticEval;
+            } else {
+                rawEval = eval::staticEval(pos, thread.nnueState);
+            }
+
             staticEval = eval::adjustEval(rawEval, pos, thread.corrhist, ply);
 
             if (staticEval >= beta) {
@@ -1038,6 +1046,8 @@ namespace stoat {
             }
 
             ++legalMoves;
+
+            m_ttable.prefetch(pos.keyAfter(move));
 
             const auto [newPos, guard] = thread.applyMove(ply, pos, move);
             const auto sennichite = newPos.testSennichite(m_cuteChessWorkaround, thread.keyHistory);
