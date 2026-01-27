@@ -1038,7 +1038,7 @@ namespace stoat {
                     continue;
                 }
 
-                if (legalMoves >= 3) {
+                if (legalMoves >= 2) {
                     break;
                 }
             }
