@@ -393,8 +393,7 @@ namespace stoat::eval::nnue {
                 return;
             }
 
-            for (const auto pt : kHandPieces)
-            {
+            for (const auto pt : kHandPieces) {
                 const auto count = hand.count(pt);
                 for (u32 featureCount = 0; featureCount < count; ++featureCount) {
                     const auto feature = handFeatureIndex(c, pt, handColor, featureCount);
@@ -430,8 +429,7 @@ namespace stoat::eval::nnue {
                 return;
             }
 
-            for (const auto pt : kHandPieces)
-            {
+            for (const auto pt : kHandPieces) {
                 const auto count = hand.count(pt);
                 for (u32 featureCount = 0; featureCount < count; ++featureCount) {
                     const auto blackFeature = handFeatureIndex(Colors::kBlack, pt, c, featureCount);
