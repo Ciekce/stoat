@@ -35,8 +35,8 @@ namespace stoat::protocol {
                 map[std::string{name}] = [](EngineState& state) { return std::make_unique<HandlerType>(state); };
             };
 
-            registerHandler.operator()<UsiHandler>("usi");
-            registerHandler.operator()<UciHandler>("uci");
+            registerHandler.template operator()<UsiHandler>("usi");
+            registerHandler.template operator()<UciHandler>("uci");
 
             return map;
         }();
