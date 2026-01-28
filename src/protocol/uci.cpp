@@ -206,7 +206,7 @@ namespace stoat::protocol {
                 const auto piece = pos.pieceOn(Square::fromFileRank(file, rank));
 
                 if (piece) {
-                    fmt::print(" |{}{}", !piece.type().isPromoted() ? " " : "", piece);
+                    fmt::print(" |{}{}", !piece.isPromoted() ? " " : "", piece);
                 } else {
                     fmt::print(" |  ");
                 }

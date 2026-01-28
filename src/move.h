@@ -59,19 +59,8 @@ namespace stoat {
         }
 
         [[nodiscard]] constexpr PieceType dropPiece() const {
-            constexpr std::array kDropPieces = {
-                PieceTypes::kPawn,
-                PieceTypes::kLance,
-                PieceTypes::kKnight,
-                PieceTypes::kSilver,
-                PieceTypes::kBishop,
-                PieceTypes::kRook,
-                PieceTypes::kGold,
-            };
-
             assert(isDrop());
-
-            return kDropPieces[get(kDropPieceShift, kPieceMask)];
+            return PieceType::fromRaw(get(kDropPieceShift, kPieceMask));
         }
 
         [[nodiscard]] constexpr bool isNull() const {

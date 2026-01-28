@@ -103,38 +103,24 @@ namespace stoat {
 
         [[nodiscard]] constexpr bool isPromoted() const {
             assert(m_id <= kNoneId);
-            return m_id > kKingId;
+            return m_id >= kPromotedPawnId;
         }
 
         [[nodiscard]] constexpr bool canPromote() const {
             assert(m_id <= kNoneId);
-            return m_id < kGoldId;
+            return m_id <= kRookId;
         }
 
         [[nodiscard]] constexpr Piece withColor(Color c) const;
 
         [[nodiscard]] constexpr PieceType promoted() const {
             assert(canPromote());
-            return fromRaw(m_id + kPromotedPawnId);
+            return fromRaw(m_id | 0b1000);
         }
 
         [[nodiscard]] constexpr PieceType unpromoted() const {
-            switch (m_id) {
-                case kPromotedPawnId:
-                    return PieceType{kPawnId};
-                case kPromotedLanceId:
-                    return PieceType{kLanceId};
-                case kPromotedKnightId:
-                    return PieceType{kKnightId};
-                case kPromotedSilverId:
-                    return PieceType{kSilverId};
-                case kPromotedBishopId:
-                    return PieceType{kBishopId};
-                case kPromotedRookId:
-                    return PieceType{kRookId};
-                default:
-                    return *this;
-            }
+            assert(m_id != kNoneId);
+            return fromRaw(m_id & 0b0111);
         }
 
         [[nodiscard]] constexpr std::string_view str() const {
@@ -259,19 +245,19 @@ namespace stoat {
 
         static constexpr std::array kAll = {
             kPawn,
-            kPromotedPawn,
             kLance,
             kKnight,
-            kPromotedLance,
-            kPromotedKnight,
             kSilver,
-            kPromotedSilver,
-            kGold,
             kBishop,
             kRook,
+            kGold,
+            kKing,
+            kPromotedPawn,
+            kPromotedLance,
+            kPromotedKnight,
+            kPromotedSilver,
             kPromotedBishop,
             kPromotedRook,
-            kKing,
         };
     };
 
@@ -292,7 +278,12 @@ namespace stoat {
 
         [[nodiscard]] constexpr bool isPromoted() const {
             assert(m_id <= kNoneId);
-            return m_id > kWhiteKingId;
+            return m_id >= kBlackPromotedPawnId;
+        }
+
+        [[nodiscard]] constexpr bool canPromote() const {
+            assert(m_id <= kNoneId);
+            return m_id <= kWhiteRookId;
         }
 
         [[nodiscard]] constexpr PieceType type() const {
@@ -310,7 +301,13 @@ namespace stoat {
         }
 
         [[nodiscard]] constexpr Piece promoted() const {
-            return fromRaw(m_id + kBlackPromotedPawnId);
+            assert(canPromote());
+            return fromRaw(m_id | 0b10000);
+        }
+
+        [[nodiscard]] constexpr Piece unpromoted() const {
+            assert(m_id != kNoneId);
+            return fromRaw(m_id & 0b01111);
         }
 
         [[nodiscard]] constexpr std::string_view str() const {
@@ -435,7 +432,7 @@ namespace stoat {
 
             const auto piece = unpromotedFromChar(str.back());
 
-            if (str.length() == 2 && !piece.type().canPromote()) {
+            if (str.length() == 2 && !piece.canPromote()) {
                 return Piece{kNoneId};
             }
 
