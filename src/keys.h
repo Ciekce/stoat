@@ -91,7 +91,7 @@ namespace stoat::keys {
 
         assert(c);
         assert(pt);
-        assert(pt.raw() < PieceTypes::kKing.raw());
+        assert(pt.raw() <= PieceTypes::kGold.raw());
         assert(count <= maxPiecesInHand(pt));
 
         return kKeys[kOffsets[pt.idx()] + count * Colors::kCount + c.idx()];

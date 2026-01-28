@@ -821,7 +821,7 @@ namespace stoat {
 
     [[nodiscard]] constexpr u32 maxPiecesInHand(PieceType pt) {
         assert(pt);
-        assert(pt.raw() < PieceTypes::kKing.raw());
+        assert(pt.raw() <= PieceTypes::kGold.raw());
         return kMaxInHand[pt.idx()];
     }
 
