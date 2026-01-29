@@ -79,7 +79,11 @@ namespace stoat {
     };
 
     [[nodiscard]] constexpr HistoryScore historyBonus(i32 depth) {
-        return static_cast<HistoryScore>(std::clamp(static_cast<i32>(depth * 823 - 300), 0, 2500));
+        return static_cast<HistoryScore>(std::clamp(depth * 823 - 900, 0, 2700));
+    }
+
+    [[nodiscard]] constexpr HistoryScore historyPenalty(i32 depth) {
+        return static_cast<HistoryScore>(-std::clamp(depth * 400 - 300, 0, 1300));
     }
 
     class HistoryTables {

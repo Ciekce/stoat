@@ -932,13 +932,15 @@ namespace stoat {
 
         if (bestMove) {
             const auto historyDepth = depth + (!pos.isInCheck() && curr.staticEval <= bestScore);
+
             const auto bonus = historyBonus(historyDepth);
+            const auto penalty = historyPenalty(historyDepth);
 
             if (!pos.isCapture(bestMove)) {
                 thread.history.updateNonCaptureScore(thread.conthist, ply, pos, bestMove, bonus);
 
                 for (const auto prevNonCapture : nonCapturesTried) {
-                    thread.history.updateNonCaptureScore(thread.conthist, ply, pos, prevNonCapture, -bonus);
+                    thread.history.updateNonCaptureScore(thread.conthist, ply, pos, prevNonCapture, penalty);
                 }
             } else {
                 const auto captured = pos.pieceOn(bestMove.to()).type();
@@ -947,7 +949,7 @@ namespace stoat {
 
             for (const auto prevCapture : capturesTried) {
                 const auto captured = pos.pieceOn(prevCapture.to()).type();
-                thread.history.updateCaptureScore(prevCapture, captured, -bonus);
+                thread.history.updateCaptureScore(prevCapture, captured, penalty);
             }
         }
 
