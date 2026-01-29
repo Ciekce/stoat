@@ -66,18 +66,13 @@ namespace stoat::see {
 
         [[nodiscard]] constexpr bool canMoveDiagonally(PieceType pt) {
             assert(pt);
-            return pt == PieceTypes::kPromotedPawn || pt == PieceTypes::kPromotedLance
-                || pt == PieceTypes::kPromotedKnight || pt == PieceTypes::kSilver || pt == PieceTypes::kPromotedSilver
-                || pt == PieceTypes::kGold || pt == PieceTypes::kBishop || pt == PieceTypes::kPromotedBishop
-                || pt == PieceTypes::kPromotedRook;
+            return pt.isPromoted() || pt == PieceTypes::kSilver || pt == PieceTypes::kGold || pt == PieceTypes::kBishop;
         }
 
         [[nodiscard]] constexpr bool canMoveOrthogonally(PieceType pt) {
             assert(pt);
-            return pt == PieceTypes::kPawn || pt == PieceTypes::kPromotedPawn || pt == PieceTypes::kLance
-                || pt == PieceTypes::kPromotedLance || pt == PieceTypes::kPromotedKnight || pt == PieceTypes::kSilver
-                || pt == PieceTypes::kPromotedSilver || pt == PieceTypes::kGold || pt == PieceTypes::kRook
-                || pt == PieceTypes::kPromotedBishop || pt == PieceTypes::kPromotedRook;
+            return pt.isPromoted() || pt == PieceTypes::kPawn || pt == PieceTypes::kLance || pt == PieceTypes::kSilver
+                || pt == PieceTypes::kGold || pt == PieceTypes::kRook;
         }
     } // namespace
 

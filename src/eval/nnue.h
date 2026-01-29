@@ -49,20 +49,7 @@ namespace stoat::eval::nnue {
     }
 
     [[nodiscard]] constexpr u32 handFeatureIndex(Color perspective, PieceType pt, Color handColor, u32 countMinusOne) {
-        constexpr auto kPieceOffsets = [] {
-            std::array<u32, PieceTypes::kCount> offsets{};
-            offsets.fill(std::numeric_limits<u32>::max());
-
-            offsets[PieceTypes::kPawn.idx()] = 0;
-            offsets[PieceTypes::kLance.idx()] = 18;
-            offsets[PieceTypes::kKnight.idx()] = 22;
-            offsets[PieceTypes::kSilver.idx()] = 26;
-            offsets[PieceTypes::kGold.idx()] = 30;
-            offsets[PieceTypes::kBishop.idx()] = 34;
-            offsets[PieceTypes::kRook.idx()] = 36;
-
-            return offsets;
-        }();
+        constexpr std::array kPieceOffsets = {0, 18, 22, 26, 30, 32, 34};
 
         return kColorStride * (handColor != perspective) + kHandOffset + kPieceOffsets[pt.idx()] + countMinusOne;
     }

@@ -33,12 +33,12 @@ namespace stoat::keys {
         constexpr usize kLancesInHand = (maxPiecesInHand(PieceTypes::kLance) + 1) * Colors::kCount;
         constexpr usize kKnightsInHand = (maxPiecesInHand(PieceTypes::kKnight) + 1) * Colors::kCount;
         constexpr usize kSilversInHand = (maxPiecesInHand(PieceTypes::kSilver) + 1) * Colors::kCount;
-        constexpr usize kGoldsInHand = (maxPiecesInHand(PieceTypes::kGold) + 1) * Colors::kCount;
         constexpr usize kBishopsInHand = (maxPiecesInHand(PieceTypes::kBishop) + 1) * Colors::kCount;
         constexpr usize kRooksInHand = (maxPiecesInHand(PieceTypes::kRook) + 1) * Colors::kCount;
+        constexpr usize kGoldsInHand = (maxPiecesInHand(PieceTypes::kGold) + 1) * Colors::kCount;
 
         constexpr auto kTotal = kPieceSquares + kStm + kPawnsInHand + kLancesInHand + kKnightsInHand + kSilversInHand
-                              + kGoldsInHand + kBishopsInHand + kRooksInHand;
+                              + kBishopsInHand + kRooksInHand + kGoldsInHand;
     } // namespace sizes
 
     namespace offsets {
@@ -48,9 +48,9 @@ namespace stoat::keys {
         constexpr auto kLancesInHand = kPawnsInHand + sizes::kPawnsInHand;
         constexpr auto kKnightsInHand = kLancesInHand + sizes::kLancesInHand;
         constexpr auto kSilversInHand = kKnightsInHand + sizes::kKnightsInHand;
-        constexpr auto kGoldsInHand = kSilversInHand + sizes::kSilversInHand;
-        constexpr auto kBishopsInHand = kGoldsInHand + sizes::kGoldsInHand;
+        constexpr auto kBishopsInHand = kSilversInHand + sizes::kSilversInHand;
         constexpr auto kRooksInHand = kBishopsInHand + sizes::kBishopsInHand;
+        constexpr auto kGoldsInHand = kRooksInHand + sizes::kRooksInHand;
     } // namespace offsets
 
     constexpr auto kKeys = [] {
@@ -79,28 +79,21 @@ namespace stoat::keys {
     }
 
     [[nodiscard]] constexpr u64 pieceInHand(Color c, PieceType pt, u32 count) {
-        constexpr auto kOffsets = [] {
-            std::array<i32, PieceTypes::kCount> offsets{};
-            offsets.fill(-1);
-
-            offsets[PieceTypes::kPawn.idx()] = offsets::kPawnsInHand;
-            offsets[PieceTypes::kLance.idx()] = offsets::kLancesInHand;
-            offsets[PieceTypes::kKnight.idx()] = offsets::kKnightsInHand;
-            offsets[PieceTypes::kSilver.idx()] = offsets::kSilversInHand;
-            offsets[PieceTypes::kGold.idx()] = offsets::kGoldsInHand;
-            offsets[PieceTypes::kBishop.idx()] = offsets::kBishopsInHand;
-            offsets[PieceTypes::kRook.idx()] = offsets::kRooksInHand;
-
-            return offsets;
-        }();
+        constexpr std::array kOffsets = {
+            offsets::kPawnsInHand,
+            offsets::kLancesInHand,
+            offsets::kKnightsInHand,
+            offsets::kSilversInHand,
+            offsets::kBishopsInHand,
+            offsets::kRooksInHand,
+            offsets::kGoldsInHand,
+        };
 
         assert(c);
         assert(pt);
+        assert(pt.raw() <= PieceTypes::kGold.raw());
         assert(count <= maxPiecesInHand(pt));
 
-        const auto offset = kOffsets[pt.idx()];
-        assert(offset != -1);
-
-        return kKeys[offset + count * Colors::kCount + c.idx()];
+        return kKeys[kOffsets[pt.idx()] + count * Colors::kCount + c.idx()];
     }
 } // namespace stoat::keys

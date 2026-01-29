@@ -393,15 +393,7 @@ namespace stoat::eval::nnue {
                 return;
             }
 
-            for (const auto pt :
-                 {PieceTypes::kPawn,
-                  PieceTypes::kLance,
-                  PieceTypes::kKnight,
-                  PieceTypes::kSilver,
-                  PieceTypes::kGold,
-                  PieceTypes::kBishop,
-                  PieceTypes::kRook})
-            {
+            for (const auto pt : kHandPieces) {
                 const auto count = hand.count(pt);
                 for (u32 featureCount = 0; featureCount < count; ++featureCount) {
                     const auto feature = handFeatureIndex(c, pt, handColor, featureCount);
@@ -437,15 +429,7 @@ namespace stoat::eval::nnue {
                 return;
             }
 
-            for (const auto pt :
-                 {PieceTypes::kPawn,
-                  PieceTypes::kLance,
-                  PieceTypes::kKnight,
-                  PieceTypes::kSilver,
-                  PieceTypes::kGold,
-                  PieceTypes::kBishop,
-                  PieceTypes::kRook})
-            {
+            for (const auto pt : kHandPieces) {
                 const auto count = hand.count(pt);
                 for (u32 featureCount = 0; featureCount < count; ++featureCount) {
                     const auto blackFeature = handFeatureIndex(Colors::kBlack, pt, c, featureCount);

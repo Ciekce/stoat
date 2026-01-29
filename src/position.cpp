@@ -35,63 +35,54 @@ namespace stoat {
         constexpr i32 kLanceHandBits = 3;
         constexpr i32 kKnightHandBits = 3;
         constexpr i32 kSilverHandBits = 3;
-        constexpr i32 kGoldHandBits = 3;
         constexpr i32 kBishopHandBits = 2;
         constexpr i32 kRookHandBits = 2;
+        constexpr i32 kGoldHandBits = 3;
 
         constexpr i32 kPawnHandOffset = 0;
         constexpr i32 kLanceHandOffset = kPawnHandOffset + kPawnHandBits;
         constexpr i32 kKnightHandOffset = kLanceHandOffset + kLanceHandBits;
         constexpr i32 kSilverHandOffset = kKnightHandOffset + kKnightHandBits;
-        constexpr i32 kGoldHandOffset = kSilverHandOffset + kSilverHandBits;
-        constexpr i32 kBishopHandOffset = kGoldHandOffset + kGoldHandBits;
+        constexpr i32 kBishopHandOffset = kSilverHandOffset + kSilverHandBits;
         constexpr i32 kRookHandOffset = kBishopHandOffset + kBishopHandBits;
+        constexpr i32 kGoldHandOffset = kRookHandOffset + kRookHandBits;
 
-        static_assert(kRookHandOffset + kRookHandBits <= 32);
+        static_assert(kGoldHandOffset + kGoldHandBits <= 32);
 
-        constexpr auto kHandOffsets = [] {
-            std::array<i32, PieceTypes::kCount> offsets{};
-            offsets.fill(-1);
+        constexpr std::array kHandOffsets = {
+            kPawnHandOffset,
+            kLanceHandOffset,
+            kKnightHandOffset,
+            kSilverHandOffset,
+            kBishopHandOffset,
+            kRookHandOffset,
+            kGoldHandOffset
+        };
 
-            offsets[PieceTypes::kPawn.idx()] = kPawnHandOffset;
-            offsets[PieceTypes::kLance.idx()] = kLanceHandOffset;
-            offsets[PieceTypes::kKnight.idx()] = kKnightHandOffset;
-            offsets[PieceTypes::kSilver.idx()] = kSilverHandOffset;
-            offsets[PieceTypes::kGold.idx()] = kGoldHandOffset;
-            offsets[PieceTypes::kBishop.idx()] = kBishopHandOffset;
-            offsets[PieceTypes::kRook.idx()] = kRookHandOffset;
-
-            return offsets;
-        }();
-
-        constexpr auto kHandMasks = [] {
-            std::array<u32, PieceTypes::kCount> masks{};
-
-            masks[PieceTypes::kPawn.idx()] = ((1 << kPawnHandBits) - 1) << kPawnHandOffset;
-            masks[PieceTypes::kLance.idx()] = ((1 << kLanceHandBits) - 1) << kLanceHandOffset;
-            masks[PieceTypes::kKnight.idx()] = ((1 << kKnightHandBits) - 1) << kKnightHandOffset;
-            masks[PieceTypes::kSilver.idx()] = ((1 << kSilverHandBits) - 1) << kSilverHandOffset;
-            masks[PieceTypes::kGold.idx()] = ((1 << kGoldHandBits) - 1) << kGoldHandOffset;
-            masks[PieceTypes::kBishop.idx()] = ((1 << kBishopHandBits) - 1) << kBishopHandOffset;
-            masks[PieceTypes::kRook.idx()] = ((1 << kRookHandBits) - 1) << kRookHandOffset;
-
-            return masks;
-        }();
+        constexpr std::array kHandMasks{
+            ((1 << kPawnHandBits) - 1) << kPawnHandOffset,
+            ((1 << kLanceHandBits) - 1) << kLanceHandOffset,
+            ((1 << kKnightHandBits) - 1) << kKnightHandOffset,
+            ((1 << kSilverHandBits) - 1) << kSilverHandOffset,
+            ((1 << kBishopHandBits) - 1) << kBishopHandOffset,
+            ((1 << kRookHandBits) - 1) << kRookHandOffset,
+            ((1 << kGoldHandBits) - 1) << kGoldHandOffset,
+        };
     } // namespace
 
     u32 Hand::count(PieceType pt) const {
         assert(pt);
+        assert(pt.raw() <= PieceTypes::kGold.raw());
 
         const auto offset = kHandOffsets[pt.idx()];
         const auto mask = kHandMasks[pt.idx()];
-
-        assert(offset != -1);
 
         return (m_hand & mask) >> offset;
     }
 
     u32 Hand::increment(PieceType pt) {
         assert(pt);
+        assert(pt.raw() <= PieceTypes::kGold.raw());
         const auto curr = count(pt);
         assert(curr < (kHandMasks[pt.idx()] >> kHandOffsets[pt.idx()]));
         set(pt, curr + 1);
@@ -100,6 +91,7 @@ namespace stoat {
 
     u32 Hand::decrement(PieceType pt) {
         assert(pt);
+        assert(pt.raw() <= PieceTypes::kGold.raw());
         const auto curr = count(pt);
         assert(curr > 0);
         set(pt, curr - 1);
@@ -108,6 +100,7 @@ namespace stoat {
 
     void Hand::set(PieceType pt, u32 count) {
         assert(pt);
+        assert(pt.raw() <= PieceTypes::kGold.raw());
 
         const auto offset = kHandOffsets[pt.idx()];
         const auto mask = kHandMasks[pt.idx()];
@@ -503,7 +496,7 @@ namespace stoat {
 
         if (move.isPromo()) {
             // can't promote a gold, a king, or an already-promoted piece
-            if (!moving.type().canPromote()) {
+            if (!moving.canPromote()) {
                 return false;
             }
 
@@ -1199,7 +1192,7 @@ fmt::format_context::iterator fmt::formatter<stoat::Position>::format(
         for (i32 file = 0; file < 9; ++file) {
             const auto piece = value.pieceOn(Square::fromFileRank(file, rank));
             if (piece) {
-                format_to(ctx.out(), " |{}{}", !piece.type().isPromoted() ? " " : "", piece);
+                format_to(ctx.out(), " |{}{}", !piece.isPromoted() ? " " : "", piece);
             } else {
                 format_to(ctx.out(), " |  ");
             }
