@@ -431,7 +431,7 @@ namespace stoat {
                 if (depth >= 3) {
                     const auto lastScore = thread.rootMoves[thread.pvIdx].windowScore;
 
-                    window = 10 + lastScore * lastScore / 32768;
+                    window = 13 + lastScore * lastScore / 24576;
 
                     alpha = std::max(lastScore - window, -kScoreInf);
                     beta = std::min(lastScore + window, kScoreInf);
