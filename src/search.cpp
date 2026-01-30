@@ -423,13 +423,16 @@ namespace stoat {
             for (thread.pvIdx = 0; thread.pvIdx < m_multiPv; ++thread.pvIdx) {
                 thread.resetSeldepth();
 
-                i32 window = 20;
+                i32 window{};
 
                 auto alpha = -kScoreInf;
                 auto beta = kScoreInf;
 
                 if (depth >= 3) {
                     const auto lastScore = thread.rootMoves[thread.pvIdx].windowScore;
+
+                    window = 7 + lastScore * lastScore / 16384;
+
                     alpha = std::max(lastScore - window, -kScoreInf);
                     beta = std::min(lastScore + window, kScoreInf);
                 }
