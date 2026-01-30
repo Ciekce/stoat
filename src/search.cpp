@@ -732,7 +732,7 @@ namespace stoat {
                 }
 
                 if (depth <= 8 && !pos.isInCheck() && alpha < 2000 && !pos.isCapture(move)
-                    && curr.staticEval + 150 + 100 * depth <= alpha)
+                    && curr.staticEval + 150 + 100 * depth + history / 128 <= alpha)
                 {
                     continue;
                 }
