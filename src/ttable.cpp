@@ -123,11 +123,11 @@ namespace stoat::tt {
 
         const auto entry = m_entries[index(key)];
 
-        if (entry.key == packEntryKey(key)) {
+        if (entry.filled() && entry.key == packEntryKey(key)) {
             dst.score = scoreFromTt(static_cast<Score>(entry.score), ply);
             dst.staticEval = static_cast<Score>(entry.staticEval);
             dst.move = Move::fromRaw(entry.move);
-            dst.depth = static_cast<i32>(entry.depth);
+            dst.depth = entry.depth();
             dst.flag = entry.flag();
             dst.pv = entry.pv();
 
@@ -149,7 +149,7 @@ namespace stoat::tt {
         auto entry = slot;
 
         const bool replace =
-            flag == Flag::kExact || packedKey != entry.key || entry.age() != m_age || depth + 4 > entry.depth;
+            flag == Flag::kExact || packedKey != entry.key || entry.age() != m_age || depth + 4 > entry.depth();
 
         if (!replace) {
             return;
@@ -162,7 +162,7 @@ namespace stoat::tt {
         entry.key = packedKey;
         entry.score = static_cast<i16>(scoreToTt(score, ply));
         entry.staticEval = static_cast<i16>(staticEval);
-        entry.depth = static_cast<u8>(depth);
+        entry.setDepth(depth);
         entry.setAgePvFlag(m_age, pv, flag);
 
         slot = entry;
@@ -203,7 +203,7 @@ namespace stoat::tt {
 
         for (usize i = 0; i < 1000; ++i) {
             const auto entry = m_entries[i];
-            if (entry.flag() != Flag::kNone && entry.age() == m_age) {
+            if (entry.filled() && entry.age() == m_age) {
                 ++filledEntries;
             }
         }

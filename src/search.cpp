@@ -593,8 +593,6 @@ namespace stoat {
         tt::ProbedEntry ttEntry{};
         bool ttHit = false;
 
-        Score rawEval{};
-
         if (!curr.excluded) {
             ttHit = m_ttable.probe(ttEntry, pos.key(), ply);
 
@@ -609,7 +607,13 @@ namespace stoat {
             if (depth >= 3 && !ttEntry.move) {
                 --depth;
             }
+        }
 
+        const bool ttPv = ttEntry.pv || kPvNode;
+
+        Score rawEval{};
+
+        if (!curr.excluded) {
             if (pos.isInCheck()) {
                 rawEval = kScoreNone;
                 curr.staticEval = kScoreNone;
@@ -618,13 +622,14 @@ namespace stoat {
                     rawEval = ttEntry.staticEval;
                 } else {
                     rawEval = eval::staticEval(pos, thread.nnueState);
+                    if (!ttHit) {
+                        m_ttable.putStaticEval(pos.key(), rawEval, ttPv);
+                    }
                 }
 
                 curr.staticEval = eval::adjustEval(rawEval, pos, thread.corrhist, ply);
             }
         }
-
-        const bool ttPv = ttEntry.pv || kPvNode;
 
         const auto complexity = [&] {
             if (ttEntry.flag == tt::Flag::kExact                                               //
