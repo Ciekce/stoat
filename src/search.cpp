@@ -86,7 +86,7 @@ namespace stoat {
             return 2 - static_cast<Score>(nodes % 4);
         }
 
-        [[nodiscard]] constexpr bool isWin(Score score) {
+        [[nodiscard]] constexpr bool isDecisive(Score score) {
             return std::abs(score) > kScoreWin;
         }
 
@@ -768,8 +768,10 @@ namespace stoat {
             i32 extension{};
 
             if (!kRootNode && ply < thread.rootDepth * 2 && move == ttMove && !curr.excluded) {
-                if (depth >= 6 && ttEntry.depth >= depth - 3 && ttEntry.flag != tt::Flag::kUpperBound) {
-                    const auto sBeta = std::max(-kScoreInf + 1, ttEntry.score - depth * 4 / 3);
+                if (depth >= 6 && ttEntry.depth >= depth - 3 && ttEntry.flag != tt::Flag::kUpperBound
+                    && !isDecisive(ttEntry.score))
+                {
+                    const auto sBeta = ttEntry.score - depth * 4 / 3;
                     const auto sDepth = (depth - 1) / 2;
 
                     curr.excluded = move;
@@ -962,7 +964,7 @@ namespace stoat {
             }
         }
 
-        if (bestScore >= beta && !isWin(bestScore) && !isWin(beta)) {
+        if (bestScore >= beta && !isDecisive(bestScore) && !isDecisive(beta)) {
             bestScore = (bestScore * depth + beta) / (depth + 1);
         }
 
