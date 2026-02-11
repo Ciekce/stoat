@@ -780,7 +780,7 @@ namespace stoat {
 
                     if (score < sBeta) {
                         if (!kPvNode && !pos.isCapture(move) && score < sBeta - 50) {
-                            extension = 2;
+                            extension = 2 + (score < sBeta - 150);
                         } else {
                             extension = 1;
                         }
