@@ -779,7 +779,7 @@ namespace stoat {
                     curr.excluded = kNullMove;
 
                     if (score < sBeta) {
-                        if (!ttPv && score < sBeta - 50) {
+                        if (!ttPv && depth >= 8 && score < sBeta - 50) {
                             extension = 2;
                         } else {
                             extension = 1;
