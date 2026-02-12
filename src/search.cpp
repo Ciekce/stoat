@@ -263,7 +263,7 @@ namespace stoat {
         m_stop.store(false);
 
         m_runningThreads.store(m_threads.size());
-        m_stoppedThreads.store(0);
+        m_softStoppedThreads.store(0);
 
         m_searching = true;
 
@@ -391,8 +391,8 @@ namespace stoat {
         }
     }
 
-    void Searcher::signalThreadStopped() {
-        const auto stopped = ++m_stoppedThreads;
+    void Searcher::signalThreadSoftStopped() {
+        const auto stopped = ++m_softStoppedThreads;
         const auto voteThreshold = (m_threadData.size() + 1) / 2;
         if (stopped >= voteThreshold) {
             m_stop.store(true);
@@ -518,7 +518,7 @@ namespace stoat {
 
             if (!thread.stoppedSoft && thread.limiter->stopSoft(nodes)) {
                 thread.stoppedSoft = true;
-                signalThreadStopped();
+                signalThreadSoftStopped();
                 if (hasStopped()) {
                     break;
                 }

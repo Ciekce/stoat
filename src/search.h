@@ -116,7 +116,7 @@ namespace stoat {
         bool m_infinite{};
         std::optional<limit::SearchLimiter> m_limiter;
 
-        std::atomic<u32> m_stoppedThreads{};
+        std::atomic<u32> m_softStoppedThreads{};
 
         u32 m_targetMultiPv{kDefaultMultiPv};
         u32 m_multiPv{};
@@ -138,7 +138,7 @@ namespace stoat {
             return m_stop.load(std::memory_order::relaxed);
         }
 
-        void signalThreadStopped();
+        void signalThreadSoftStopped();
 
         void stopThreads();
 
