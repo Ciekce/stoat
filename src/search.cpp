@@ -199,8 +199,8 @@ namespace stoat {
         m_cuteChessWorkaround = enabled;
     }
 
-    void Searcher::setLimiter(std::unique_ptr<limit::ISearchLimiter> limiter) {
-        m_limiter = std::move(limiter);
+    void Searcher::setLimiter(limit::SearchLimiter limiter) {
+        m_limiter = limiter;
     }
 
     void Searcher::startSearch(
@@ -208,10 +208,9 @@ namespace stoat {
         std::span<const u64> keyHistory,
         util::Instant startTime,
         bool infinite,
-        i32 maxDepth,
-        std::unique_ptr<limit::ISearchLimiter> limiter
+        i32 maxDepth
     ) {
-        if (!limiter) {
+        if (!m_limiter) {
             fmt::println(stderr, "Missing limiter");
             return;
         }
@@ -243,7 +242,6 @@ namespace stoat {
         }
 
         m_infinite = infinite;
-        m_limiter = std::move(limiter);
 
         m_rootMoveList = rootMoves;
         assert(!m_rootMoveList.empty());
@@ -303,9 +301,9 @@ namespace stoat {
             return;
         }
 
-        auto currLimiter = std::move(m_limiter);
+        const auto currLimiter = m_limiter;
 
-        m_limiter = std::make_unique<limit::CompoundLimiter>();
+        m_limiter = limit::SearchLimiter{util::Instant::now()};
 
         m_multiPv = 1;
         m_infinite = false;
@@ -322,7 +320,7 @@ namespace stoat {
         info.time = m_startTime.elapsed();
         info.nodes = thread.loadNodes();
 
-        m_limiter = std::move(currLimiter);
+        m_limiter = currLimiter;
     }
 
     void Searcher::runDatagenSearch() {

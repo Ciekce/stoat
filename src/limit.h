@@ -20,117 +20,58 @@
 
 #include "types.h"
 
-#include <algorithm>
-#include <memory>
-#include <vector>
+#include <optional>
 
-#include "move.h"
 #include "thread.h"
-#include "util/multi_array.h"
 #include "util/timer.h"
 
 namespace stoat::limit {
-    class ISearchLimiter {
-    public:
-        virtual ~ISearchLimiter() = default;
-
-        virtual void update(
-            [[maybe_unused]] i32 depth,
-            [[maybe_unused]] usize totalNodes,
-            [[maybe_unused]] const RootMove& pvMove
-        ) {}
-
-        [[nodiscard]] virtual bool stopSoft(usize nodes) = 0;
-        [[nodiscard]] virtual bool stopHard(usize nodes) = 0;
-    };
-
-    class CompoundLimiter final : public ISearchLimiter {
-    public:
-        ~CompoundLimiter() final = default;
-
-        template <typename T, typename... Args>
-        inline void addLimiter(Args&&... args) {
-            m_limiters.push_back(std::make_unique<T>(std::forward<Args>(args)...));
-        }
-
-        inline void update(i32 depth, usize totalNodes, const RootMove& pvMove) final {
-            for (auto& limiter : m_limiters) {
-                limiter->update(depth, totalNodes, pvMove);
-            }
-        }
-
-        [[nodiscard]] inline bool stopSoft(usize nodes) final {
-            return std::ranges::any_of(m_limiters, [&](const auto& limiter) { return limiter->stopSoft(nodes); });
-        }
-
-        [[nodiscard]] inline bool stopHard(usize nodes) final {
-            return std::ranges::any_of(m_limiters, [&](const auto& limiter) { return limiter->stopHard(nodes); });
-        }
-
-    private:
-        std::vector<std::unique_ptr<ISearchLimiter>> m_limiters{};
-    };
-
-    class NodeLimiter final : public ISearchLimiter {
-    public:
-        explicit NodeLimiter(usize maxNodes);
-        ~NodeLimiter() final = default;
-
-        [[nodiscard]] bool stopSoft(usize nodes) final;
-        [[nodiscard]] bool stopHard(usize nodes) final;
-
-    private:
-        usize m_maxNodes;
-    };
-
-    class SoftNodeLimiter final : public ISearchLimiter {
-    public:
-        explicit SoftNodeLimiter(usize optNodes, usize maxNodes);
-        ~SoftNodeLimiter() final = default;
-
-        [[nodiscard]] bool stopSoft(usize nodes) final;
-        [[nodiscard]] bool stopHard(usize nodes) final;
-
-    private:
-        usize m_optNodes;
-        usize m_maxNodes;
-    };
-
-    class MoveTimeLimiter final : public ISearchLimiter {
-    public:
-        MoveTimeLimiter(util::Instant startTime, f64 maxTime);
-        ~MoveTimeLimiter() final = default;
-
-        [[nodiscard]] bool stopSoft(usize nodes) final;
-        [[nodiscard]] bool stopHard(usize nodes) final;
-
-    private:
-        util::Instant m_startTime;
-        f64 m_maxTime;
-    };
-
     struct TimeLimits {
         f64 remaining;
         f64 increment;
         f64 byoyomi;
     };
 
-    class TimeManager final : public ISearchLimiter {
+    class TimeManager {
     public:
-        TimeManager(util::Instant startTime, const TimeLimits& limits, u32 moveOverheadMs, u32 moveCount);
-        ~TimeManager() final = default;
+        TimeManager(const TimeLimits& limits, u32 moveOverheadMs, u32 moveCount);
 
-        void update(i32 depth, usize totalNodes, const RootMove& pvMove) final;
+        void update(i32 depth, usize totalNodes, const RootMove& pvMove);
 
-        [[nodiscard]] bool stopSoft(usize nodes) final;
-        [[nodiscard]] bool stopHard(usize nodes) final;
+        [[nodiscard]] bool stopSoft(f64 time) const;
+        [[nodiscard]] bool stopHard(f64 time) const;
 
     private:
-        util::Instant m_startTime;
-
         f64 m_optTime;
         f64 m_maxTime;
 
         f64 m_scale{1.0};
+    };
+
+    class SearchLimiter {
+    public:
+        explicit SearchLimiter(util::Instant startTime);
+
+        bool setHardNodes(usize nodes);
+        bool setSoftNodes(usize nodes);
+
+        bool setMoveTime(f64 time);
+
+        bool setTournamentTime(const TimeLimits& limits, u32 moveOverheadMs, u32 moveCount);
+
+        void update(i32 depth, usize totalNodes, const RootMove& pvMove);
+
+        [[nodiscard]] bool stopSoft(usize nodes) const;
+        [[nodiscard]] bool stopHard(usize nodes) const;
+
+    private:
+        util::Instant m_startTime;
+
+        std::optional<usize> m_hardNodes;
+        std::optional<usize> m_softNodes;
+
+        std::optional<f64> m_moveTime;
+
+        std::optional<TimeManager> m_timeManager;
     };
 } // namespace stoat::limit

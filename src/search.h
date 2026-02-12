@@ -63,21 +63,14 @@ namespace stoat {
         void setMinimal(bool minimal);
         void setCuteChessWorkaround(bool enabled);
 
-        void setLimiter(std::unique_ptr<limit::ISearchLimiter> limiter);
-
-        // THIS POINTER WILL BE DANGLING IF setLimiter
-        // IS CALLED OR THE SEARCHER IS DESTROYED
-        [[nodiscard]] inline limit::ISearchLimiter* limiter() {
-            return m_limiter.get();
-        }
+        void setLimiter(limit::SearchLimiter limiter);
 
         void startSearch(
             const Position& pos,
             std::span<const u64> keyHistory,
             util::Instant startTime,
             bool infinite,
-            i32 maxDepth,
-            std::unique_ptr<limit::ISearchLimiter> limiter
+            i32 maxDepth
         );
         void stop();
 
@@ -121,7 +114,7 @@ namespace stoat {
         std::atomic_bool m_quit{};
 
         bool m_infinite{};
-        std::unique_ptr<limit::ISearchLimiter> m_limiter{};
+        std::optional<limit::SearchLimiter> m_limiter;
 
         u32 m_targetMultiPv{kDefaultMultiPv};
         u32 m_multiPv{};

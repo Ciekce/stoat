@@ -255,7 +255,7 @@ namespace stoat::protocol {
             return;
         }
 
-        auto limiter = std::make_unique<limit::CompoundLimiter>();
+        limit::SearchLimiter limiter{startTime};
 
         bool infinite = false;
 
@@ -270,9 +270,11 @@ namespace stoat::protocol {
         std::optional<f64> byoyomi{};
 
         for (i32 i = 0; i < args.size(); ++i) {
-            if (args[i] == "infinite") {
+            const auto limitStr = args[i];
+
+            if (limitStr == "infinite") {
                 infinite = true;
-            } else if (args[i] == "depth") {
+            } else if (limitStr == "depth") {
                 if (++i == args.size()) {
                     fmt::println(stderr, "Missing depth");
                     return;
@@ -282,7 +284,7 @@ namespace stoat::protocol {
                     fmt::println(stderr, "Invalid depth '{}'", args[i]);
                     return;
                 }
-            } else if (args[i] == "nodes") {
+            } else if (limitStr == "nodes") {
                 if (++i == args.size()) {
                     fmt::println(stderr, "Missing node limit");
                     return;
@@ -295,8 +297,11 @@ namespace stoat::protocol {
                     return;
                 }
 
-                limiter->addLimiter<limit::NodeLimiter>(maxNodes);
-            } else if (args[i] == "movetime") {
+                if (!limiter.setHardNodes(maxNodes)) {
+                    fmt::println(stderr, "Duplicate node limits");
+                    return;
+                }
+            } else if (limitStr == "movetime") {
                 if (++i == args.size()) {
                     fmt::println(stderr, "Missing move time limit");
                     return;
@@ -312,82 +317,65 @@ namespace stoat::protocol {
                 maxTimeMs = std::max<i64>(maxTimeMs, 1);
 
                 const auto maxTimeSec = static_cast<f64>(maxTimeMs) / 1000.0;
-                limiter->addLimiter<limit::MoveTimeLimiter>(startTime, maxTimeSec);
-            } else if (args[i] == btimeToken()) {
+
+                if (!limiter.setMoveTime(maxTimeSec)) {
+                    fmt::println(stderr, "Duplicate movetime limits");
+                    return;
+                }
+            } else if (limitStr == btimeToken() || limitStr == wtimeToken() || limitStr == bincToken()
+                       || limitStr == wincToken())
+            {
                 if (++i == args.size()) {
-                    fmt::println(stderr, "Missing {} limit", btimeToken());
+                    fmt::println(stderr, "Missing {} limit", limitStr);
                     return;
                 }
 
-                i64 btimeMs{};
+                auto& limit = [&]() -> std::optional<f64>& {
+                    if (limitStr == btimeToken()) {
+                        return btime;
+                    } else if (limitStr == wtimeToken()) {
+                        return wtime;
+                    } else if (limitStr == bincToken()) {
+                        return binc;
+                    } else if (limitStr == wincToken()) {
+                        return winc;
+                    }
+                    __builtin_unreachable();
+                }();
 
-                if (!util::tryParse(btimeMs, args[i])) {
-                    fmt::println(stderr, "Invalid {} limit '{}'", btimeToken(), args[i]);
+                i64 ms{};
+
+                if (!util::tryParse(ms, args[i])) {
+                    fmt::println(stderr, "Invalid {} limit '{}'", limitStr, args[i]);
                     return;
                 }
 
-                btimeMs = std::max<i64>(btimeMs, 1);
-                btime = static_cast<f64>(btimeMs) / 1000.0;
-            } else if (args[i] == wtimeToken()) {
-                if (++i == args.size()) {
-                    fmt::println(stderr, "Missing {} limit", wtimeToken());
+                if (limit) {
+                    fmt::println(stderr, "Duplicate {} limits", limitStr);
                     return;
                 }
 
-                i64 wtimeMs{};
-
-                if (!util::tryParse(wtimeMs, args[i])) {
-                    fmt::println(stderr, "Invalid {} limit '{}'", wtimeToken(), args[i]);
-                    return;
-                }
-
-                wtimeMs = std::max<i64>(wtimeMs, 1);
-                wtime = static_cast<f64>(wtimeMs) / 1000.0;
-            } else if (args[i] == bincToken()) {
-                if (++i == args.size()) {
-                    fmt::println(stderr, "Missing {} limit", bincToken());
-                    return;
-                }
-
-                i64 bincMs{};
-
-                if (!util::tryParse(bincMs, args[i])) {
-                    fmt::println(stderr, "Invalid {} limit '{}'", bincToken(), args[i]);
-                    return;
-                }
-
-                bincMs = std::max<i64>(bincMs, 0);
-                binc = static_cast<f64>(bincMs) / 1000.0;
-            } else if (args[i] == wincToken()) {
-                if (++i == args.size()) {
-                    fmt::println(stderr, "Missing {} limit", wincToken());
-                    return;
-                }
-
-                i64 wincMs{};
-
-                if (!util::tryParse(wincMs, args[i])) {
-                    fmt::println(stderr, "Invalid {} limit '{}'", wincToken(), args[i]);
-                    return;
-                }
-
-                wincMs = std::max<i64>(wincMs, 0);
-                winc = static_cast<f64>(wincMs) / 1000.0;
+                limit = static_cast<f64>(ms) / 1000.0;
             } else if (args[i] == "byoyomi") {
                 if (++i == args.size()) {
                     fmt::println(stderr, "Missing byoyomi");
                     return;
                 }
 
-                i64 byoyomiMs{};
+                i64 ms{};
 
-                if (!util::tryParse(byoyomiMs, args[i])) {
+                if (!util::tryParse(ms, args[i])) {
                     fmt::println(stderr, "Invalid byoyomi '{}'", args[i]);
                     return;
                 }
 
-                byoyomiMs = std::max<i64>(byoyomiMs, 0);
-                byoyomi = static_cast<f64>(byoyomiMs) / 1000.0;
+                if (byoyomi) {
+                    fmt::println(stderr, "Duplicate byoyomi");
+                    return;
+                }
+
+                ms = std::max<i64>(ms, 0);
+                byoyomi = static_cast<f64>(ms) / 1000.0;
             } else if (args[i] == "mate") {
                 printInfoString("go mate not supported");
                 printGoMateResponse();
@@ -398,20 +386,22 @@ namespace stoat::protocol {
         const auto time = m_state.pos.stm() == Colors::kBlack ? btime : wtime;
         const auto inc = m_state.pos.stm() == Colors::kBlack ? binc : winc;
 
+        if (inc && !time) {
+            printInfoString("Warning: increment given but no time, ignoring");
+        }
+
         if (time) {
             const limit::TimeLimits limits{
-                .remaining = *time,
+                .remaining = std::max(*time, 0.001),
                 .increment = inc.value_or(0.0),
                 .byoyomi = byoyomi.value_or(0.0),
             };
 
-            limiter->addLimiter<limit::TimeManager>(startTime, limits, m_state.moveOverhead, m_state.pos.moveCount());
-        } else if (inc) {
-            printInfoString("Warning: increment given but no time, ignoring");
+            limiter.setTournamentTime(limits, m_state.moveOverhead, m_state.pos.moveCount());
         }
 
-        m_state.searcher
-            ->startSearch(m_state.pos, m_state.keyHistory, startTime, infinite, maxDepth, std::move(limiter));
+        m_state.searcher->setLimiter(limiter);
+        m_state.searcher->startSearch(m_state.pos, m_state.keyHistory, startTime, infinite, maxDepth);
     }
 
     void UciLikeHandler::handle_stop(

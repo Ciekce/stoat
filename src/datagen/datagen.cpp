@@ -161,7 +161,11 @@ namespace stoat::datagen {
             util::rng::Jsf64Rng rng{seed};
 
             Searcher searcher{kDatagenTtSizeMib};
-            searcher.setLimiter(std::make_unique<limit::SoftNodeLimiter>(kSoftNodes, kHardNodes));
+
+            limit::SearchLimiter limiter{util::Instant::now()};
+            limiter.setSoftNodes(kSoftNodes);
+            limiter.setHardNodes(kHardNodes);
+            searcher.setLimiter(limiter);
 
             std::vector<u64> keyHistory{};
             keyHistory.reserve(1024);

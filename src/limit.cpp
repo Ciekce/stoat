@@ -23,51 +23,7 @@ namespace stoat::limit {
         constexpr usize kTimeCheckInterval = 2048;
     } // namespace
 
-    NodeLimiter::NodeLimiter(usize maxNodes) :
-            m_maxNodes{maxNodes} {}
-
-    bool NodeLimiter::stopSoft(usize nodes) {
-        return stopHard(nodes);
-    }
-
-    bool NodeLimiter::stopHard(usize nodes) {
-        return nodes >= m_maxNodes;
-    }
-
-    SoftNodeLimiter::SoftNodeLimiter(usize optNodes, usize maxNodes) :
-            m_optNodes{optNodes}, m_maxNodes{maxNodes} {
-        if (m_optNodes > m_maxNodes) {
-            m_optNodes = m_maxNodes;
-        }
-    }
-
-    bool SoftNodeLimiter::stopSoft(usize nodes) {
-        return nodes >= m_optNodes;
-    }
-
-    bool SoftNodeLimiter::stopHard(usize nodes) {
-        return nodes >= m_maxNodes;
-    }
-
-    MoveTimeLimiter::MoveTimeLimiter(util::Instant startTime, f64 maxTime) :
-            m_startTime{startTime}, m_maxTime{maxTime} {}
-
-    bool MoveTimeLimiter::stopSoft([[maybe_unused]] usize nodes) {
-        return m_startTime.elapsed() >= m_maxTime;
-    }
-
-    bool MoveTimeLimiter::stopHard(usize nodes) {
-        if (nodes == 0 || nodes % kTimeCheckInterval != 0) {
-            return false;
-        }
-
-        return stopSoft(nodes);
-    }
-
-    TimeManager::TimeManager(util::Instant startTime, const TimeLimits& limits, u32 moveOverheadMs, u32 moveCount) :
-            m_startTime{startTime} {
-        fmt::println("info string move overhead: {} ms", moveOverheadMs);
-
+    TimeManager::TimeManager(const TimeLimits& limits, u32 moveOverheadMs, u32 moveCount) {
         const auto moveOverhead = static_cast<f64>(moveOverheadMs) / 1000.0;
 
         const auto remaining = std::max(limits.remaining - moveOverhead, 0.0);
@@ -92,15 +48,96 @@ namespace stoat::limit {
         m_scale *= 2.2 - bestMoveNodeFraction * 1.6;
     }
 
-    bool TimeManager::stopSoft([[maybe_unused]] usize nodes) {
-        return util::Instant::now() >= m_startTime + m_optTime * m_scale;
+    bool TimeManager::stopSoft(f64 time) const {
+        return time >= m_optTime * m_scale;
     }
 
-    bool TimeManager::stopHard(usize nodes) {
-        if (nodes == 0 || nodes % kTimeCheckInterval != 0) {
+    bool TimeManager::stopHard(f64 time) const {
+        return time >= m_maxTime;
+    }
+
+    SearchLimiter::SearchLimiter(util::Instant startTime) :
+            m_startTime{startTime} {}
+
+    bool SearchLimiter::setHardNodes(usize nodes) {
+        if (m_hardNodes) {
             return false;
         }
 
-        return m_startTime.elapsed() >= m_maxTime;
+        m_hardNodes = nodes;
+        return true;
+    }
+
+    bool SearchLimiter::setSoftNodes(usize nodes) {
+        if (m_softNodes) {
+            return false;
+        }
+
+        m_softNodes = nodes;
+        return true;
+    }
+
+    bool SearchLimiter::setMoveTime(f64 time) {
+        if (m_moveTime) {
+            return false;
+        }
+
+        m_moveTime = time;
+        return true;
+    }
+
+    bool SearchLimiter::setTournamentTime(const TimeLimits& limits, u32 moveOverheadMs, u32 moveCount) {
+        if (m_timeManager) {
+            return false;
+        }
+
+        m_timeManager = TimeManager{limits, moveOverheadMs, moveCount};
+        return true;
+    }
+
+    void SearchLimiter::update(i32 depth, usize totalNodes, const RootMove& pvMove) {
+        if (m_timeManager) {
+            m_timeManager->update(depth, totalNodes, pvMove);
+        }
+    }
+
+    bool SearchLimiter::stopSoft(usize nodes) const {
+        if (m_softNodes && nodes >= *m_softNodes) {
+            return true;
+        }
+
+        if (m_moveTime || m_timeManager) {
+            const auto time = m_startTime.elapsed();
+
+            if (m_moveTime && time >= *m_moveTime) {
+                return true;
+            }
+
+            if (m_timeManager && m_timeManager->stopSoft(time)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool SearchLimiter::stopHard(usize nodes) const {
+        if (m_hardNodes && nodes >= *m_hardNodes) {
+            return true;
+        }
+
+        if (nodes > 0 && nodes % kTimeCheckInterval == 0 && (m_moveTime || m_timeManager)) {
+            const auto time = m_startTime.elapsed();
+
+            if (m_moveTime && time >= *m_moveTime) {
+                return true;
+            }
+
+            if (m_timeManager && m_timeManager->stopHard(time)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 } // namespace stoat::limit
