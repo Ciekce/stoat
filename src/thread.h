@@ -28,8 +28,10 @@
 #include "correction.h"
 #include "eval/nnue.h"
 #include "history.h"
+#include "limit.h"
 #include "position.h"
 #include "pv.h"
+#include "root_move.h"
 
 namespace stoat {
     struct SearchStats {
@@ -48,22 +50,6 @@ namespace stoat {
 
             return *this;
         }
-    };
-
-    struct RootMove {
-        Score score{-kScoreInf};
-        Score windowScore{-kScoreInf};
-
-        Score displayScore{-kScoreInf};
-        Score previousScore{-kScoreInf};
-
-        bool upperbound{false};
-        bool lowerbound{false};
-
-        i32 seldepth{};
-        PvList pv{};
-
-        usize nodes{};
     };
 
     template <bool kUpdateNnue>
@@ -100,7 +86,9 @@ namespace stoat {
 
         u32 id{};
 
+        std::optional<limit::SearchLimiter> limiter{};
         i32 maxDepth{};
+        bool stoppedSoft{};
 
         bool datagen{false};
 

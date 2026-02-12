@@ -250,7 +250,10 @@ namespace stoat {
 
         for (auto& thread : m_threadData) {
             thread->reset(pos, keyHistory);
+
+            thread->limiter = m_limiter;
             thread->maxDepth = maxDepth;
+            thread->stoppedSoft = false;
 
             thread->nnueState.reset(pos);
         }
@@ -258,7 +261,9 @@ namespace stoat {
         m_startTime = startTime;
 
         m_stop.store(false);
+
         m_runningThreads.store(m_threads.size());
+        m_stoppedThreads.store(0);
 
         m_searching = true;
 
@@ -386,6 +391,14 @@ namespace stoat {
         }
     }
 
+    void Searcher::signalThreadStopped() {
+        const auto stopped = ++m_stoppedThreads;
+        const auto voteThreshold = (m_threadData.size() + 1) / 2;
+        if (stopped >= voteThreshold) {
+            m_stop.store(true);
+        }
+    }
+
     void Searcher::stopThreads() {
         stop();
 
@@ -499,18 +512,20 @@ namespace stoat {
                 break;
             }
 
-            if (thread.isMainThread()) {
-                const auto nodes = thread.loadNodes();
+            const auto nodes = thread.loadNodes();
 
-                m_limiter->update(depth, nodes, thread.pvMove());
+            thread.limiter->update(depth, nodes, thread.pvMove());
 
-                if (m_limiter->stopSoft(nodes)) {
+            if (!thread.stoppedSoft && thread.limiter->stopSoft(nodes)) {
+                thread.stoppedSoft = true;
+                signalThreadStopped();
+                if (hasStopped()) {
                     break;
                 }
+            }
 
-                if (!m_minimal) {
-                    report(thread, depth, m_startTime.elapsed());
-                }
+            if (thread.isMainThread() && !m_minimal) {
+                report(thread, depth, m_startTime.elapsed());
             }
         }
 
@@ -565,7 +580,7 @@ namespace stoat {
         }
 
         if (!kRootNode && thread.isMainThread() && thread.rootDepth > 1) {
-            if (m_limiter->stopHard(thread.loadNodes())) {
+            if (thread.limiter->stopHard(thread.loadNodes())) {
                 m_stop.store(true, std::memory_order::relaxed);
                 return 0;
             }
@@ -996,7 +1011,7 @@ namespace stoat {
         }
 
         if (thread.isMainThread() && thread.rootDepth > 1) {
-            if (m_limiter->stopHard(thread.loadNodes())) {
+            if (thread.limiter->stopHard(thread.loadNodes())) {
                 m_stop.store(true, std::memory_order::relaxed);
                 return 0;
             }
