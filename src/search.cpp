@@ -1027,13 +1027,34 @@ namespace stoat {
             return pos.isInCheck() ? 0 : eval::adjustedEval(pos, thread.nnueState, thread.corrhist, ply);
         }
 
+        tt::ProbedEntry ttEntry{};
+        const bool ttHit = m_ttable.probe(ttEntry, pos.key(), ply);
+
+        if (!kPvNode
+            && (ttEntry.flag == tt::Flag::kExact                                     //
+                || (ttEntry.flag == tt::Flag::kUpperBound && ttEntry.score <= alpha) //
+                || (ttEntry.flag == tt::Flag::kLowerBound && ttEntry.score >= beta)))
+        {
+            return ttEntry.score;
+        }
+
+        const bool ttPv = ttEntry.pv || kPvNode;
+
         Score rawEval, staticEval;
 
         if (pos.isInCheck()) {
             rawEval = kScoreNone;
             staticEval = -kScoreMate + ply;
         } else {
-            rawEval = eval::staticEval(pos, thread.nnueState);
+            if (ttHit && ttEntry.staticEval != kScoreNone) {
+                rawEval = ttEntry.staticEval;
+            } else {
+                rawEval = eval::staticEval(pos, thread.nnueState);
+                if (!ttHit) {
+                    m_ttable.putStaticEval(pos.key(), rawEval, ttPv);
+                }
+            }
+
             staticEval = eval::adjustEval(rawEval, pos, thread.corrhist, ply);
 
             if (staticEval >= beta) {
@@ -1045,7 +1066,10 @@ namespace stoat {
             }
         }
 
+        auto bestMove = kNullMove;
         auto bestScore = staticEval;
+
+        auto ttFlag = tt::Flag::kUpperBound;
 
         auto generator = MoveGenerator::qsearch(pos, thread.history, thread.conthist, ply);
 
@@ -1075,6 +1099,8 @@ namespace stoat {
 
             ++legalMoves;
 
+            m_ttable.prefetch(pos.keyAfter(move));
+
             const auto [newPos, guard] = thread.applyMove(ply, pos, move);
             const auto sennichite = newPos.testSennichite(m_cuteChessWorkaround, thread.keyHistory);
 
@@ -1103,11 +1129,17 @@ namespace stoat {
 
             if (score > alpha) {
                 alpha = score;
+                bestMove = move;
+                ttFlag = tt::Flag::kLowerBound;
             }
 
             if (score >= beta) {
                 break;
             }
+        }
+
+        if (legalMoves > 0) {
+            m_ttable.put(pos.key(), bestScore, rawEval, bestMove, 0, ply, ttFlag, ttPv);
         }
 
         return bestScore;
