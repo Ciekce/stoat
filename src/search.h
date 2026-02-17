@@ -125,6 +125,8 @@ namespace stoat {
 
         tt::TTable m_ttable;
 
+        CorrectionHistory m_corrhist{};
+
         enum class RootStatus {
             kNoLegalMoves = 0,
             kGenerated,

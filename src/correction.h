@@ -21,6 +21,7 @@
 #include "types.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cstring>
 
 #include "core.h"
@@ -50,10 +51,12 @@ namespace stoat {
         static constexpr i32 kMaxBonus = kLimit / 4;
 
         struct Entry {
-            i16 value{};
+            std::atomic<i16> value{};
 
             inline void update(i32 bonus) {
-                value += bonus - value * std::abs(bonus) / kLimit;
+                auto v = value.load(std::memory_order::relaxed);
+                v += bonus - v * std::abs(bonus) / kLimit;
+                value.store(v, std::memory_order::relaxed);
             }
 
             [[nodiscard]] inline operator i32() const {

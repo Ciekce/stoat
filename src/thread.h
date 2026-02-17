@@ -101,7 +101,7 @@ namespace stoat {
         i32 depthCompleted{};
 
         HistoryTables history{};
-        CorrectionHistory corrhist{};
+        CorrectionHistory *corrhist{};
 
         eval::nnue::NnueState nnueState{};
 
