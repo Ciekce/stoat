@@ -353,15 +353,15 @@ namespace stoat::eval::nnue {
     } // namespace
 
     void Accumulator::activate(Color c, u32 feature) {
-        auto& acc = color(c);
+        auto acc = color(c);
         for (u32 i = 0; i < kL1Size; ++i) {
             acc[i] += s_network.ftWeights[feature][i];
         }
     }
 
     void Accumulator::activate(u32 blackFeature, u32 whiteFeature) {
-        auto& black = this->black();
-        auto& white = this->white();
+        auto black = this->black();
+        auto white = this->white();
 
         for (u32 i = 0; i < kL1Size; ++i) {
             black[i] += s_network.ftWeights[blackFeature][i];
@@ -448,30 +448,35 @@ namespace stoat::eval::nnue {
     }
 
     void NnueState::reset(const Position& pos) {
-        m_curr = &m_accStacc[0];
-        m_curr->reset(pos);
+        m_top = &m_accStacc[0];
+        m_top->acc.reset(pos);
     }
 
-    void NnueState::push(const Position& pos, const NnueUpdates& updates) {
-        assert(m_curr < &m_accStacc[kMaxDepth]);
-        auto next = m_curr + 1;
-        applyUpdates(pos, updates, *m_curr, *next);
-        m_curr = next;
+    BoardObserver NnueState::push() {
+        assert(m_top < &m_accStacc[kMaxDepth]);
+
+        ++m_top;
+
+        m_top->ctx = {};
+        m_top->setDirty();
+
+        return BoardObserver{m_top->ctx};
     }
 
     void NnueState::pop() {
-        assert(m_curr > &m_accStacc[0]);
-        --m_curr;
-    }
-
-    void NnueState::applyInPlace(const Position& pos, const NnueUpdates& updates) {
-        assert(m_curr);
-        applyUpdates(pos, updates, *m_curr, *m_curr);
+        assert(m_top > &m_accStacc[0]);
+        --m_top;
     }
 
     i32 NnueState::evaluate(Color stm) const {
-        assert(m_curr);
-        return forward(*m_curr, stm);
+        assert(m_top);
+        return forward(m_top->acc, stm);
+    }
+
+    void NnueState::apply(const UpdateContext& ctx, const Position& pos) {
+        assert(m_top);
+        assert(m_top != &m_accStacc[0]);
+        applyUpdates(pos, ctx.updates, (m_top - 1)->acc, m_top->acc);
     }
 
     i32 evaluateOnce(const Position& pos) {

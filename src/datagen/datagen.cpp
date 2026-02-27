@@ -235,7 +235,8 @@ namespace stoat::datagen {
                     const auto oldPos = pos;
 
                     keyHistory.push_back(pos.key());
-                    pos = pos.applyMove<NnueUpdateAction::kApplyInPlace>(move, &thread.nnueState);
+                    pos = pos.applyMove(move);
+                    thread.nnueState.reset(pos);
 
                     const auto sennichite = pos.testSennichite(false, keyHistory, 999999999);
 

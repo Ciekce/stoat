@@ -46,9 +46,13 @@ namespace stoat {
 
         keyHistory.push_back(pos.key());
 
+        auto observer = nnueState.push();
+        const auto newPos = pos.applyMove(move, observer);
+        nnueState.apply(observer.ctx, newPos);
+
         return std::pair<Position, ThreadPosGuard<true>>{
             std::piecewise_construct,
-            std::forward_as_tuple(pos.applyMove<NnueUpdateAction::kPush>(move, &nnueState)),
+            std::forward_as_tuple(newPos),
             std::forward_as_tuple(keyHistory, nnueState)
         };
     }

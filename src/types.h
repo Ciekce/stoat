@@ -56,3 +56,5 @@ namespace stoat {
 
 #define ST_STRINGIFY_(S) #S
 #define ST_STRINGIFY(S) ST_STRINGIFY_(S)
+
+#define ST_UNUSED(...) (void)sizeof(__VA_ARGS__)

@@ -128,6 +128,46 @@ namespace stoat {
         [[nodiscard]] constexpr bool operator==(const KingPair& other) const = default;
     };
 
+    class Position;
+
+    struct NullObserver {
+        void prepareKingMove(Color c, Square src, Square dst) {
+            ST_UNUSED(c, src, dst);
+        }
+
+        void pieceAdded(const Position& pos, Piece piece, Square sq) {
+            ST_UNUSED(pos, piece, sq);
+        }
+
+        void pieceRemoved(const Position& pos, Piece piece, Square sq) {
+            ST_UNUSED(pos, piece, sq);
+        }
+
+        void pieceMutated(const Position& pos, Piece oldPiece, Piece newPiece, Square sq) {
+            ST_UNUSED(pos, oldPiece, newPiece, sq);
+        }
+
+        void pieceMoved(const Position& pos, Piece piece, Square src, Square dst) {
+            ST_UNUSED(pos, piece, src, dst);
+        }
+
+        void piecePromoted(const Position& pos, Piece oldPiece, Square src, Piece newPiece, Square dst) {
+            ST_UNUSED(pos, oldPiece, src, newPiece, dst);
+        }
+
+        void pieceAddedToHand(Color c, PieceType pt, u32 countAfter) {
+            ST_UNUSED(c, pt, countAfter);
+        }
+
+        void pieceRemovedFromHand(Color c, PieceType pt, u32 countAfter) {
+            ST_UNUSED(c, pt, countAfter);
+        }
+
+        void finalize([[maybe_unused]] const Position& pos) {
+            //
+        }
+    };
+
     class Position {
     public:
         Position();
@@ -135,8 +175,12 @@ namespace stoat {
         Position(const Position&) = default;
         Position(Position&&) = default;
 
-        template <NnueUpdateAction kUpdateAction = NnueUpdateAction::kNone>
-        [[nodiscard]] Position applyMove(Move move, eval::nnue::NnueState* nnueState = nullptr) const;
+        template <typename Observer>
+        [[nodiscard]] Position applyMove(Move move, Observer observer) const;
+
+        [[nodiscard]] inline Position applyMove(Move move) const {
+            return applyMove(move, NullObserver{});
+        }
 
         [[nodiscard]] Position applyNullMove() const;
 
@@ -288,12 +332,12 @@ namespace stoat {
 
         void addPiece(Square sq, Piece piece);
 
-        template <bool kUpdateNnue>
-        void movePiece(Square from, Square to, Piece piece, eval::nnue::NnueUpdates& nnueUpdates);
-        template <bool kUpdateNnue>
-        void promotePiece(Square from, Square to, Piece piece, eval::nnue::NnueUpdates& nnueUpdates);
-        template <bool kUpdateNnue>
-        void dropPiece(Square sq, Piece piece, eval::nnue::NnueUpdates& nnueUpdates);
+        template <typename Observer>
+        void movePiece(Square from, Square to, Piece piece, Observer observer);
+        template <typename Observer>
+        void promotePiece(Square from, Square to, Piece piece, Observer observer);
+        template <typename Observer>
+        void dropPiece(Square sq, Piece piece, Observer observer);
 
         void updateAttacks();
         void updateAttacks(Square to);

@@ -62,50 +62,37 @@ namespace stoat::eval::nnue {
         util::StaticVector<Update, 2> adds{};
         util::StaticVector<Update, 2> subs{};
 
-        inline void pushMove(KingPair kings, Piece src, Piece dst, Square from, Square to) {
-            assert(src);
-            assert(dst);
-            assert(from);
-            assert(to);
-            assert(src.color() == dst.color());
-
-            const auto blackSrcFeature = psqtFeatureIndex(Colors::kBlack, kings, src, from);
-            const auto whiteSrcFeature = psqtFeatureIndex(Colors::kWhite, kings, src, from);
-            subs.push({blackSrcFeature, whiteSrcFeature});
-
-            const auto blackDstFeature = psqtFeatureIndex(Colors::kBlack, kings, dst, to);
-            const auto whiteDstFeature = psqtFeatureIndex(Colors::kWhite, kings, dst, to);
-            adds.push({blackDstFeature, whiteDstFeature});
+        inline void pushPieceAdded(KingPair kings, Piece piece, Square sq) {
+            const auto blackFeature = psqtFeatureIndex(Colors::kBlack, kings, piece, sq);
+            const auto whiteFeature = psqtFeatureIndex(Colors::kWhite, kings, piece, sq);
+            adds.push({blackFeature, whiteFeature});
         }
 
-        inline void pushCapture(KingPair kings, Square sq, Piece captured, u32 currHandCount) {
-            assert(sq);
-            assert(captured);
+        inline void pushPieceRemoved(KingPair kings, Piece piece, Square sq) {
+            const auto blackFeature = psqtFeatureIndex(Colors::kBlack, kings, piece, sq);
+            const auto whiteFeature = psqtFeatureIndex(Colors::kWhite, kings, piece, sq);
+            subs.push({blackFeature, whiteFeature});
+        }
 
-            const auto blackCapturedFeature = psqtFeatureIndex(Colors::kBlack, kings, captured, sq);
-            const auto whiteCapturedFeature = psqtFeatureIndex(Colors::kWhite, kings, captured, sq);
-            subs.push({blackCapturedFeature, whiteCapturedFeature});
+        inline void pushHandIncrement(Color c, PieceType pt, u32 countAfter) {
+            assert(c);
+            assert(pt);
+            assert(countAfter > 0);
 
-            const auto blackHandFeature =
-                handFeatureIndex(Colors::kBlack, captured.type().unpromoted(), captured.color().flip(), currHandCount);
-            const auto whiteHandFeature =
-                handFeatureIndex(Colors::kWhite, captured.type().unpromoted(), captured.color().flip(), currHandCount);
+            const auto blackHandFeature = handFeatureIndex(Colors::kBlack, pt, c, countAfter - 1);
+            const auto whiteHandFeature = handFeatureIndex(Colors::kWhite, pt, c, countAfter - 1);
+
             adds.push({blackHandFeature, whiteHandFeature});
         }
 
-        inline void pushDrop(KingPair kings, Piece piece, Square to, u32 currHandCount) {
-            assert(piece);
-            assert(to);
-            assert(currHandCount > 0);
+        inline void pushHandDecrement(Color c, PieceType pt, u32 countAfter) {
+            assert(c);
+            assert(pt);
+            assert(countAfter < maxPiecesInHand(pt));
 
-            const auto blackDroppedFeature = psqtFeatureIndex(Colors::kBlack, kings, piece, to);
-            const auto whiteDroppedFeature = psqtFeatureIndex(Colors::kWhite, kings, piece, to);
-            adds.push({blackDroppedFeature, whiteDroppedFeature});
+            const auto blackHandFeature = handFeatureIndex(Colors::kBlack, pt, c, countAfter);
+            const auto whiteHandFeature = handFeatureIndex(Colors::kWhite, pt, c, countAfter);
 
-            const auto blackHandFeature =
-                handFeatureIndex(Colors::kBlack, piece.type(), piece.color(), currHandCount - 1);
-            const auto whiteHandFeature =
-                handFeatureIndex(Colors::kWhite, piece.type(), piece.color(), currHandCount - 1);
             subs.push({blackHandFeature, whiteHandFeature});
         }
 
@@ -120,6 +107,28 @@ namespace stoat::eval::nnue {
         }
     };
 
+    struct UpdateContext {
+        NnueUpdates updates{};
+        KingPair kingSquares{};
+    };
+
+    struct BoardObserver {
+        UpdateContext& ctx;
+
+        void prepareKingMove(Color c, Square src, Square dst);
+
+        void pieceAdded(const Position& pos, Piece piece, Square sq);
+        void pieceRemoved(const Position& pos, Piece piece, Square sq);
+        void pieceMutated(const Position& pos, Piece oldPiece, Piece newPiece, Square sq);
+        void pieceMoved(const Position& pos, Piece piece, Square src, Square dst);
+        void piecePromoted(const Position& pos, Piece oldPiece, Square src, Piece newPiece, Square dst);
+
+        void pieceAddedToHand(Color c, PieceType pt, u32 countAfter);
+        void pieceRemovedFromHand(Color c, PieceType pt, u32 countAfter);
+
+        void finalize(const Position& pos);
+    };
+
     struct SingleAccumulator {
         alignas(64) std::array<i16, kL1Size> values;
     };
@@ -127,28 +136,28 @@ namespace stoat::eval::nnue {
     struct Accumulator {
         std::array<SingleAccumulator, 2> accs;
 
-        [[nodiscard]] std::array<i16, kL1Size>& black() {
+        [[nodiscard]] std::span<i16, kL1Size> black() {
             return accs[Colors::kBlack.idx()].values;
         }
 
-        [[nodiscard]] std::array<i16, kL1Size>& white() {
+        [[nodiscard]] std::span<i16, kL1Size> white() {
             return accs[Colors::kWhite.idx()].values;
         }
 
-        [[nodiscard]] std::array<i16, kL1Size>& color(Color c) {
+        [[nodiscard]] std::span<i16, kL1Size> color(Color c) {
             assert(c);
             return accs[c.idx()].values;
         }
 
-        [[nodiscard]] const std::array<i16, kL1Size>& black() const {
+        [[nodiscard]] std::span<const i16, kL1Size> black() const {
             return accs[Colors::kBlack.idx()].values;
         }
 
-        [[nodiscard]] const std::array<i16, kL1Size>& white() const {
+        [[nodiscard]] std::span<const i16, kL1Size> white() const {
             return accs[Colors::kWhite.idx()].values;
         }
 
-        [[nodiscard]] const std::array<i16, kL1Size>& color(Color c) const {
+        [[nodiscard]] std::span<const i16, kL1Size> color(Color c) const {
             assert(c);
             return accs[c.idx()].values;
         }
@@ -166,16 +175,36 @@ namespace stoat::eval::nnue {
 
         void reset(const Position& pos);
 
-        void push(const Position& pos, const NnueUpdates& updates);
+        BoardObserver push();
         void pop();
 
-        void applyInPlace(const Position& pos, const NnueUpdates& updates);
+        void apply(const UpdateContext& ctx, const Position& pos);
 
         [[nodiscard]] i32 evaluate(Color stm) const;
 
     private:
-        std::vector<Accumulator> m_accStacc{};
-        Accumulator* m_curr{nullptr};
+        struct UpdatableAccumulator {
+            Accumulator acc{};
+            UpdateContext ctx{};
+            std::array<bool, 2> dirty{};
+
+            inline void setDirty() {
+                dirty[0] = dirty[1] = true;
+            }
+
+            inline void setUpdated(Color c) {
+                assert(c != Colors::kNone);
+                dirty[c.idx()] = false;
+            }
+
+            [[nodiscard]] inline bool isDirty(Color c) const {
+                assert(c != Colors::kNone);
+                return dirty[c.idx()];
+            }
+        };
+
+        std::vector<UpdatableAccumulator> m_accStacc{};
+        UpdatableAccumulator* m_top{nullptr};
     };
 
     [[nodiscard]] i32 evaluateOnce(const Position& pos);
@@ -188,5 +217,52 @@ namespace stoat::eval::nnue {
         const bool prevFlip = prevKingSq.relative(c).file() > 4;
 
         return flip != prevFlip;
+    }
+
+    inline void BoardObserver::prepareKingMove(Color c, Square src, Square dst) {
+        if (requiresRefresh(c, dst, src)) {
+            ctx.updates.setRefresh(c);
+        }
+    }
+
+    inline void BoardObserver::pieceAdded(const Position& pos, Piece piece, Square sq) {
+        ctx.updates.pushPieceAdded(pos.kingSquares(), piece, sq);
+    }
+
+    inline void BoardObserver::pieceRemoved(const Position& pos, Piece piece, Square sq) {
+        ctx.updates.pushPieceRemoved(pos.kingSquares(), piece, sq);
+    }
+
+    inline void BoardObserver::pieceMutated(const Position& pos, Piece oldPiece, Piece newPiece, Square sq) {
+        ctx.updates.pushPieceRemoved(pos.kingSquares(), oldPiece, sq);
+        ctx.updates.pushPieceAdded(pos.kingSquares(), newPiece, sq);
+    }
+
+    inline void BoardObserver::pieceMoved(const Position& pos, Piece piece, Square src, Square dst) {
+        ctx.updates.pushPieceRemoved(pos.kingSquares(), piece, src);
+        ctx.updates.pushPieceAdded(pos.kingSquares(), piece, dst);
+    }
+
+    inline void BoardObserver::piecePromoted(
+        const Position& pos,
+        Piece oldPiece,
+        Square src,
+        Piece newPiece,
+        Square dst
+    ) {
+        ctx.updates.pushPieceRemoved(pos.kingSquares(), oldPiece, src);
+        ctx.updates.pushPieceAdded(pos.kingSquares(), newPiece, dst);
+    }
+
+    inline void BoardObserver::pieceAddedToHand(Color c, PieceType pt, u32 countAfter) {
+        ctx.updates.pushHandIncrement(c, pt, countAfter);
+    }
+
+    inline void BoardObserver::pieceRemovedFromHand(Color c, PieceType pt, u32 countAfter) {
+        ctx.updates.pushHandDecrement(c, pt, countAfter);
+    }
+
+    inline void BoardObserver::finalize(const Position& pos) {
+        ctx.kingSquares = pos.kingSquares();
     }
 } // namespace stoat::eval::nnue

@@ -249,20 +249,18 @@ namespace stoat {
         }
     }
 
-    template Position Position::applyMove<NnueUpdateAction::kNone>(Move, eval::nnue::NnueState*) const;
-    template Position Position::applyMove<NnueUpdateAction::kPush>(Move, eval::nnue::NnueState*) const;
-    template Position Position::applyMove<NnueUpdateAction::kApplyInPlace>(Move, eval::nnue::NnueState*) const;
+    using NnueObserver = eval::nnue::BoardObserver;
+
+    template Position Position::applyMove<NullObserver>(Move, NullObserver) const;
+    template Position Position::applyMove<NnueObserver>(Move, NnueObserver) const;
 
     Position::Position() {
         m_mailbox.fill(Pieces::kNone);
     }
 
-    template <NnueUpdateAction kUpdateAction>
-    Position Position::applyMove(Move move, eval::nnue::NnueState* nnueState) const {
-        static constexpr bool kUpdateNnue = kUpdateAction != NnueUpdateAction::kNone;
-
+    template <typename Observer>
+    Position Position::applyMove(Move move, Observer observer) const {
         auto newPos = *this;
-        eval::nnue::NnueUpdates updates{};
 
         const auto stm = this->stm();
 
@@ -270,7 +268,7 @@ namespace stoat {
             const auto sq = move.to();
             const auto piece = move.dropPiece().withColor(stm);
 
-            newPos.dropPiece<kUpdateNnue>(sq, piece, updates);
+            newPos.dropPiece(sq, piece, observer);
         } else {
             const auto to = move.to();
             const auto from = move.from();
@@ -278,17 +276,13 @@ namespace stoat {
             const auto piece = newPos.pieceOn(from);
 
             if (move.isPromo()) {
-                newPos.promotePiece<kUpdateNnue>(from, to, piece, updates);
+                newPos.promotePiece(from, to, piece, observer);
             } else {
-                newPos.movePiece<kUpdateNnue>(from, to, piece, updates);
+                newPos.movePiece(from, to, piece, observer);
             }
         }
 
-        if constexpr (kUpdateAction == NnueUpdateAction::kPush) {
-            nnueState->push(newPos, updates);
-        } else if constexpr (kUpdateAction == NnueUpdateAction::kApplyInPlace) {
-            nnueState->applyInPlace(newPos, updates);
-        }
+        observer.finalize(newPos);
 
         ++newPos.m_moveCount;
 
@@ -833,8 +827,8 @@ namespace stoat {
         }
     }
 
-    template <bool kUpdateNnue>
-    void Position::movePiece(Square from, Square to, Piece piece, eval::nnue::NnueUpdates& nnueUpdates) {
+    template <typename Observer>
+    void Position::movePiece(Square from, Square to, Piece piece, Observer observer) {
         assert(from);
         assert(to);
         assert(from != to);
@@ -845,44 +839,51 @@ namespace stoat {
         assert(!captured || captured.color() != piece.color());
         assert(!captured || captured.type() != PieceTypes::kKing);
 
+        if (piece.type() == PieceTypes::kKing) {
+            observer.prepareKingMove(piece.color(), from, to);
+            m_kingSquares.squares[piece.color().idx()] = to;
+        }
+
         if (captured) {
+            m_mailbox[from.idx()] = Pieces::kNone;
+
+            m_colors[piece.color().idx()] ^= from.bit();
+            m_pieces[piece.type().idx()] ^= from.bit();
+
+            observer.pieceRemoved(*this, piece, from);
+
             m_colors[captured.color().idx()] ^= to.bit();
             m_pieces[captured.type().idx()] ^= to.bit();
+
+            m_colors[piece.color().idx()] ^= to.bit();
+            m_pieces[piece.type().idx()] ^= to.bit();
+
+            m_mailbox[to.idx()] = piece;
+
+            observer.pieceMutated(*this, captured, piece, to);
 
             const auto handPt = captured.type().unpromoted();
 
             const auto newCount = m_hands[captured.color().flip().idx()].increment(handPt);
             m_keys.switchHandCount(piece.color(), handPt, newCount - 1, newCount);
+            observer.pieceAddedToHand(piece.color(), handPt, newCount);
 
             m_keys.flipPiece(captured, to);
+        } else {
+            m_colors[piece.color().idx()] ^= from.bit() ^ to.bit();
+            m_pieces[piece.type().idx()] ^= from.bit() ^ to.bit();
 
-            if constexpr (kUpdateNnue) {
-                nnueUpdates.pushCapture(m_kingSquares, to, captured, newCount - 1);
-            }
+            m_mailbox[from.idx()] = Pieces::kNone;
+            m_mailbox[to.idx()] = piece;
+
+            observer.pieceMoved(*this, piece, from, to);
         }
-
-        m_colors[piece.color().idx()] ^= from.bit() ^ to.bit();
-        m_pieces[piece.type().idx()] ^= from.bit() ^ to.bit();
-
-        m_mailbox[from.idx()] = Pieces::kNone;
-        m_mailbox[to.idx()] = piece;
 
         m_keys.movePiece(piece, from, to);
-
-        if (piece.type() == PieceTypes::kKing) {
-            m_kingSquares.squares[piece.color().idx()] = to;
-            if (kUpdateNnue && eval::nnue::requiresRefresh(piece.color(), to, from)) {
-                nnueUpdates.setRefresh(piece.color());
-            }
-        }
-
-        if constexpr (kUpdateNnue) {
-            nnueUpdates.pushMove(m_kingSquares, piece, piece, from, to);
-        }
     }
 
-    template <bool kUpdateNnue>
-    void Position::promotePiece(Square from, Square to, Piece piece, eval::nnue::NnueUpdates& nnueUpdates) {
+    template <typename Observer>
+    void Position::promotePiece(Square from, Square to, Piece piece, Observer observer) {
         assert(from);
         assert(to);
         assert(from != to);
@@ -894,57 +895,62 @@ namespace stoat {
         assert(!captured || captured.color() != piece.color());
         assert(!captured || captured.type() != PieceTypes::kKing);
 
+        const auto promoted = piece.promoted();
+
         if (captured) {
+            m_mailbox[from.idx()] = Pieces::kNone;
+
+            m_colors[piece.color().idx()] ^= from.bit();
+            m_pieces[piece.type().idx()] ^= from.bit();
+
+            observer.pieceRemoved(*this, piece, from);
+
             m_colors[captured.color().idx()] ^= to.bit();
             m_pieces[captured.type().idx()] ^= to.bit();
+
+            m_colors[promoted.color().idx()] ^= to.bit();
+            m_pieces[promoted.type().idx()] ^= to.bit();
+
+            m_mailbox[to.idx()] = promoted;
+
+            observer.pieceMutated(*this, captured, promoted, to);
 
             const auto handPt = captured.type().unpromoted();
 
             const auto newCount = m_hands[captured.color().flip().idx()].increment(handPt);
             m_keys.switchHandCount(piece.color(), handPt, newCount - 1, newCount);
+            observer.pieceAddedToHand(piece.color(), handPt, newCount);
 
             m_keys.flipPiece(captured, to);
+        } else {
+            m_colors[piece.color().idx()] ^= from.bit() ^ to.bit();
 
-            if constexpr (kUpdateNnue) {
-                nnueUpdates.pushCapture(m_kingSquares, to, captured, newCount - 1);
-            }
+            m_pieces[piece.type().idx()] ^= from.bit();
+            m_pieces[promoted.type().idx()] ^= to.bit();
+
+            m_mailbox[from.idx()] = Pieces::kNone;
+            m_mailbox[to.idx()] = promoted;
+
+            observer.piecePromoted(*this, piece, from, promoted, to);
         }
-
-        const auto promoted = piece.promoted();
-
-        m_colors[piece.color().idx()] ^= from.bit() ^ to.bit();
-
-        m_pieces[piece.type().idx()] ^= from.bit();
-        m_pieces[promoted.type().idx()] ^= to.bit();
-
-        m_mailbox[from.idx()] = Pieces::kNone;
-        m_mailbox[to.idx()] = promoted;
 
         m_keys.flipPiece(piece, from);
         m_keys.flipPiece(promoted, to);
-
-        // kings cannot promote
-
-        if constexpr (kUpdateNnue) {
-            nnueUpdates.pushMove(m_kingSquares, piece, promoted, from, to);
-        }
     }
 
-    template <bool kUpdateNnue>
-    void Position::dropPiece(Square sq, Piece piece, eval::nnue::NnueUpdates& nnueUpdates) {
+    template <typename Observer>
+    void Position::dropPiece(Square sq, Piece piece, Observer observer) {
         auto& hand = m_hands[piece.color().idx()];
 
         assert(!pieceOn(sq));
         assert(hand.count(piece.type()) > 0);
 
         addPiece(sq, piece);
+        observer.pieceAdded(*this, piece, sq);
 
         const auto newCount = hand.decrement(piece.type());
         m_keys.switchHandCount(piece.color(), piece.type(), newCount + 1, newCount);
-
-        if constexpr (kUpdateNnue) {
-            nnueUpdates.pushDrop(m_kingSquares, piece, sq, newCount + 1);
-        }
+        observer.pieceRemovedFromHand(piece.color(), piece.type(), newCount);
     }
 
     void Position::updateAttacks() {
