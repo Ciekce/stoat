@@ -26,7 +26,7 @@
 #include "nnue.h"
 
 namespace stoat::eval {
-    [[nodiscard]] Score staticEval(const Position& pos, const nnue::NnueState& nnueState);
+    [[nodiscard]] Score staticEval(const Position& pos, nnue::NnueState& nnueState);
     [[nodiscard]] Score staticEvalOnce(const Position& pos);
 
     [[nodiscard]] Score adjustEval(
@@ -40,7 +40,7 @@ namespace stoat::eval {
     [[nodiscard]] Score adjustedEval(
         const Position& pos,
         std::span<const u64> keyHistory,
-        const nnue::NnueState& nnueState,
+        nnue::NnueState& nnueState,
         const CorrectionHistory& corrhist,
         i32 ply
     );

@@ -169,6 +169,26 @@ namespace stoat::eval::nnue {
         void reset(const Position& pos);
     };
 
+    struct UpdatableAccumulator {
+        Accumulator acc{};
+        UpdateContext ctx{};
+        std::array<bool, 2> dirty{};
+
+        inline void setDirty() {
+            dirty[0] = dirty[1] = true;
+        }
+
+        inline void setUpdated(Color c) {
+            assert(c != Colors::kNone);
+            dirty[c.idx()] = false;
+        }
+
+        [[nodiscard]] inline bool isDirty(Color c) const {
+            assert(c != Colors::kNone);
+            return dirty[c.idx()];
+        }
+    };
+
     class NnueState {
     public:
         NnueState();
@@ -178,33 +198,15 @@ namespace stoat::eval::nnue {
         BoardObserver push();
         void pop();
 
-        void apply(const UpdateContext& ctx, const Position& pos);
+        void applyImmediately(const UpdateContext& ctx, const Position& pos);
 
-        [[nodiscard]] i32 evaluate(Color stm) const;
+        [[nodiscard]] i32 evaluate(const Position& pos);
 
     private:
-        struct UpdatableAccumulator {
-            Accumulator acc{};
-            UpdateContext ctx{};
-            std::array<bool, 2> dirty{};
-
-            inline void setDirty() {
-                dirty[0] = dirty[1] = true;
-            }
-
-            inline void setUpdated(Color c) {
-                assert(c != Colors::kNone);
-                dirty[c.idx()] = false;
-            }
-
-            [[nodiscard]] inline bool isDirty(Color c) const {
-                assert(c != Colors::kNone);
-                return dirty[c.idx()];
-            }
-        };
-
         std::vector<UpdatableAccumulator> m_accStacc{};
         UpdatableAccumulator* m_top{nullptr};
+
+        void ensureUpToDate(const Position& pos);
     };
 
     [[nodiscard]] i32 evaluateOnce(const Position& pos);

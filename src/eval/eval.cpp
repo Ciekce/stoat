@@ -21,8 +21,8 @@
 #include <algorithm>
 
 namespace stoat::eval {
-    Score staticEval(const Position& pos, const nnue::NnueState& nnueState) {
-        const auto nnue = nnueState.evaluate(pos.stm());
+    Score staticEval(const Position& pos, nnue::NnueState& nnueState) {
+        const auto nnue = nnueState.evaluate(pos);
         return std::clamp(nnue, -kScoreWin + 1, kScoreWin - 1);
     }
 
@@ -46,7 +46,7 @@ namespace stoat::eval {
     Score adjustedEval(
         const Position& pos,
         std::span<const u64> keyHistory,
-        const nnue::NnueState& nnueState,
+        nnue::NnueState& nnueState,
         const CorrectionHistory& corrhist,
         i32 ply
     ) {
