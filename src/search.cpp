@@ -809,14 +809,13 @@ namespace stoat {
 
             newDepth += extension;
 
-            if (depth >= 2 && legalMoves >= 3 + 2 * kRootNode && !givesCheck
-                && generator.stage() >= MovegenStage::kNonCaptures)
-            {
+            if (depth >= 2 && legalMoves >= 3 + 2 * kRootNode && generator.stage() >= MovegenStage::kNonCaptures) {
                 auto r = baseLmr;
                 const auto dist = Square::chebyshev(move.to(), pos.kingSq(pos.stm().flip()));
 
                 r += !ttPv;
                 r += !improving;
+                r -= givesCheck;
                 r -= history / 8192;
                 r += expectedCutnode * 3;
 
