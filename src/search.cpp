@@ -766,8 +766,8 @@ namespace stoat {
                         } else {
                             extension = 1;
                         }
-                    } else if (sBeta >= beta) {
-                        return sBeta;
+                    } else if (score >= beta) {
+                        return !isDecisive(score) ? (score + beta) / 2 : score;
                     } else if (ttEntry.score >= beta) {
                         extension = -1;
                     } else if (expectedCutnode) {
