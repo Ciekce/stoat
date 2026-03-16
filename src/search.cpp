@@ -761,7 +761,7 @@ namespace stoat {
                     curr.excluded = kNullMove;
 
                     if (score < sBeta) {
-                        if (!pos.isCapture(move) && score < sBeta - 25 - 100 * kPvNode) {
+                        if (!pos.isCapture(move) && score < sBeta - 25 - 25 * kPvNode) {
                             extension = 2;
                         } else {
                             extension = 1;
