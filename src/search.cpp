@@ -828,6 +828,8 @@ namespace stoat {
                     r -= (attacks::pieceAttacks(move.dropPiece(), move.to(), pos.stm(), pos.occupancy())
                           & pos.colorBb(pos.stm().flip()))
                              .popcount();
+                } else if (move.from() == pos.kingSq(pos.stm())) {
+                    r -= (attacks::kingZone(move.from()) & pos.colorBb(pos.stm().flip())).popcount() >= 3;
                 }
 
                 const auto reduced = std::min(std::max(newDepth - r, 1), newDepth - 1) + kPvNode;

@@ -104,6 +104,12 @@ namespace stoat::attacks {
             attacks |= bit.shiftSouthWest();
             attacks |= bit.shiftSouthEast();
         });
+
+        constexpr auto kKingZones = generateAttacks([](Bitboard& zone, Square sq) {
+            for (auto steps = kKingAttacks[sq.idx()]; !steps.empty();) {
+                zone |= kKingAttacks[steps.popLsb().idx()];
+            }
+        });
     } // namespace tables
 
     [[nodiscard]] constexpr Bitboard pawnAttacks(Square sq, Color c) {
@@ -173,6 +179,11 @@ namespace stoat::attacks {
     [[nodiscard]] constexpr Bitboard kingAttacks(Square sq) {
         assert(sq);
         return tables::kKingAttacks[sq.idx()];
+    }
+
+    [[nodiscard]] constexpr Bitboard kingZone(Square sq) {
+        assert(sq);
+        return tables::kKingZones[sq.idx()];
     }
 
     [[nodiscard]] constexpr Bitboard promotedBishopAttacks(Square sq, Bitboard occ) {
