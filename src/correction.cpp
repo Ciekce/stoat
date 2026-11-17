@@ -49,10 +49,11 @@ namespace stoat {
             assert(base < target);
 
             const auto size = keyHistory.size();
-            const auto baseKey = base == 0 ? pos.key() : keyHistory[size - base];
-            const auto targetKey = keyHistory[size - target];
 
-            if (keyHistory.size() >= target) {
+            if (size >= target) {
+                const auto baseKey = base == 0 ? pos.key() : keyHistory[size - base];
+                const auto targetKey = keyHistory[size - target];
+
                 tables.cont[(baseKey ^ targetKey) % kEntries].update(bonus);
             }
         };
@@ -77,10 +78,11 @@ namespace stoat {
             assert(base < target);
 
             const auto size = keyHistory.size();
-            const auto baseKey = base == 0 ? pos.key() : keyHistory[size - base];
-            const auto targetKey = keyHistory[size - target];
 
-            if (keyHistory.size() >= target) {
+            if (size >= target) {
+                const auto baseKey = base == 0 ? pos.key() : keyHistory[size - base];
+                const auto targetKey = keyHistory[size - target];
+
                 correction += weight * tables.cont[(baseKey ^ targetKey) % kEntries];
             }
         };
