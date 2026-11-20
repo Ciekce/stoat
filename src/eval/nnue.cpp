@@ -22,8 +22,8 @@
 
 #if __AVX512F__ && __AVX512BW__
     #include "simd/avx512.h"
-#elif __AVX2__
-    #include "simd/avx2.h"
+//#elif __AVX2__
+//    #include "simd/avx2.h"
 #else
     #error No supported SIMD arch detected
 #endif
