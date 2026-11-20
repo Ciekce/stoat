@@ -70,9 +70,10 @@ namespace stoat::eval::nnue {
 
             static constexpr auto kPairCount = kL1Size / 2;
 
-            static constexpr auto kL1Shift = 16 + kQBits - kFtShift - kFtQBits - kFtQBits - kL1QBits;
+            static constexpr auto kL1Shift = 16 + kQBits + kQBits - kFtShift - kFtQBits - kFtQBits - kL1QBits;
 
             static constexpr i32 kQ = 1 << kQBits;
+            static constexpr i64 kOutQ = kQ;
 
             alignas(64) std::array<u8, kL1Size> ftOut;
             alignas(64) std::array<i32, kL2Size * 2> l1Out;
@@ -80,11 +81,6 @@ namespace stoat::eval::nnue {
 
             const auto ftZero = zeroI16();
             const auto ftOne = set1I16((1 << kFtQBits) - 1);
-
-            const auto l1CreluZero = zeroI32();
-            const auto l1CreluOne = set1I32(kQ);
-
-            const auto l1ScreluOne = set1I32(kQ * kQ);
 
             const auto l2Zero = zeroI32();
             const auto l2One = set1I32(kQ * kQ * kQ);
@@ -174,17 +170,17 @@ namespace stoat::eval::nnue {
                 auto out = addI32(sums_0, sums_1);
 
                 out = shiftRightI32<-kL1Shift>(out);
-                out = addI32(out, biases);
+                out = addI32(out, shiftLeftI32<kQBits>(biases));
 
                 auto crelu = out;
                 auto screlu = out;
 
-                crelu = maxI32(crelu, l1CreluZero);
-                crelu = minI32(crelu, l1CreluOne);
-                crelu = shiftLeftI32<kQBits>(crelu);
+                crelu = maxI32(crelu, zeroI32());
+                crelu = minI32(crelu, set1I32(kQ * kQ));
 
                 screlu = mulI32(screlu, screlu);
-                screlu = minI32(screlu, l1ScreluOne);
+                screlu = minI32(screlu, set1I32(kQ * kQ * kQ * kQ));
+                screlu = shiftRightI32<kQBits * 2>(screlu);
 
                 storeI32(&l1Out[i], crelu);
                 storeI32(&l1Out[i + kL2Size], screlu);
@@ -248,13 +244,12 @@ namespace stoat::eval::nnue {
 
             const auto s = addI32(out_0, out_1);
 
-            auto out = s_network.l3Bias + hsumI32(s);
+            auto out = s_network.l3Bias + static_cast<i64>(hsumI32(s));
 
-            out /= kQ;
             out *= kScale;
-            out /= kQ * kQ * kQ;
+            out /= kOutQ * kOutQ * kOutQ * kOutQ;
 
-            return out;
+            return static_cast<i32>(out);
         }
 
         inline void addSub(std::span<const i16, kL1Size> src, std::span<i16, kL1Size> dst, u32 add, u32 sub) {
