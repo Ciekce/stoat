@@ -36,6 +36,7 @@ add_executable(stoat-native 3rdparty/fmt/src/format.cc src/main.cpp src/types.h 
 	src/datagen/format/stoatformat.cpp src/util/u4array.h src/datagen/datagen.h src/datagen/datagen.cpp src/util/ctrlc.h
 	src/util/ctrlc.cpp src/eval/arch.h src/eval/nnue.h src/eval/nnue.cpp src/history.h src/history.cpp src/stats.h
 	src/stats.cpp src/correction.h src/correction.cpp src/root_move.h
+	src/eval/simd/avx2.h
 )
 
 target_include_directories(stoat-native PUBLIC 3rdparty/fmt/include)

@@ -58,3 +58,9 @@ namespace stoat {
 #define ST_STRINGIFY(S) ST_STRINGIFY_(S)
 
 #define ST_UNUSED(...) (void)sizeof(__VA_ARGS__)
+
+#ifndef NDEBUG
+#define ST_ALWAYS_INLINE_NDEBUG inline
+#else
+#define ST_ALWAYS_INLINE_NDEBUG __attribute__((always_inline)) inline
+#endif
