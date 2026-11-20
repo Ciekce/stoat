@@ -43,6 +43,7 @@ namespace stoat::protocol {
         REGISTER_HANDLER(d);
         REGISTER_HANDLER(splitperft);
         REGISTER_HANDLER(raweval);
+        REGISTER_HANDLER(move);
 
 #undef REGISTER_HANDLER
     }
@@ -240,8 +241,13 @@ namespace stoat::protocol {
 
         for (usize i = next + 1; i < args.size(); ++i) {
             if (auto parsedMove = parseMove(args[i])) {
+                const auto move = parsedMove.take();
+                if (!m_state.pos.isPseudolegal(move) || !m_state.pos.isLegal(move)) {
+                    fmt::println(stderr, "Illegal move '{}'", move);
+                    break;
+                }
                 m_state.keyHistory.push_back(m_state.pos.key());
-                m_state.pos = m_state.pos.applyMove(parsedMove.take());
+                m_state.pos = m_state.pos.applyMove(move);
             } else {
                 fmt::println(stderr, "Invalid move '{}'", args[i]);
                 break;
@@ -322,8 +328,10 @@ namespace stoat::protocol {
                     fmt::println(stderr, "Duplicate movetime limits");
                     return;
                 }
-            } else if (limitStr == btimeToken() || limitStr == wtimeToken() || limitStr == bincToken()
-                       || limitStr == wincToken())
+            } else if (
+                limitStr == btimeToken() || limitStr == wtimeToken() || limitStr == bincToken()
+                || limitStr == wincToken()
+            )
             {
                 if (++i == args.size()) {
                     fmt::println(stderr, "Missing {} limit", limitStr);
@@ -576,5 +584,23 @@ namespace stoat::protocol {
         [[maybe_unused]] util::Instant startTime
     ) {
         fmt::println("{}", eval::nnue::evaluateOnce(m_state.pos));
+    }
+
+    void UciLikeHandler::handle_move(std::span<std::string_view> args, [[maybe_unused]] util::Instant startTime) {
+        if (args.empty()) {
+            return;
+        }
+
+        if (auto parsedMove = parseMove(args[0])) {
+            const auto move = parsedMove.take();
+            if (!m_state.pos.isPseudolegal(move) || !m_state.pos.isLegal(move)) {
+                fmt::println(stderr, "Illegal move '{}'", move);
+                return;
+            }
+            m_state.keyHistory.push_back(m_state.pos.key());
+            m_state.pos = m_state.pos.applyMove(move);
+        } else {
+            fmt::println(stderr, "Invalid move '{}'", args[0]);
+        }
     }
 } // namespace stoat::protocol
