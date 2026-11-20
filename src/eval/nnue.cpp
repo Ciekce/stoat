@@ -20,7 +20,13 @@
 
 #include <algorithm>
 
-#include <immintrin.h>
+#if __AVX512F__ && __AVX512BW__
+    #include "simd/avx512.h"
+#elif __AVX2__
+    #include "simd/avx2.h"
+#else
+    #error No supported SIMD arch detected
+#endif
 
 #ifdef _MSC_VER
     #define ST_MSVC
@@ -42,6 +48,8 @@ namespace {
     INCBIN(std::byte, defaultNet, ST_NETWORK_FILE);
 }
 
+using namespace stoat::eval::nnue::simd;
+
 namespace stoat::eval::nnue {
     namespace {
         struct Network {
@@ -57,45 +65,12 @@ namespace stoat::eval::nnue {
 
         const Network& s_network = *reinterpret_cast<const Network*>(g_defaultNetData);
 
-        [[nodiscard]] inline __m256i load(const void* ptr) {
-            return _mm256_load_si256(reinterpret_cast<const __m256i*>(ptr));
-        }
-
-        inline void store(void* ptr, __m256i vec) {
-            _mm256_store_si256(reinterpret_cast<__m256i*>(ptr), vec);
-        }
-
-        [[nodiscard]] __m256i dpbusd(__m256i acc, __m256i u, __m256i i) {
-            const auto p = _mm256_maddubs_epi16(u, i);
-            const auto w = _mm256_madd_epi16(p, _mm256_set1_epi16(1));
-            return _mm256_add_epi32(acc, w);
-        }
-
-        [[nodiscard]] i32 hsum32(__m256i v) {
-            const auto high128 = _mm256_extracti128_si256(v, 1);
-            const auto low128 = _mm256_castsi256_si128(v);
-
-            const auto sum128 = _mm_add_epi32(high128, low128);
-
-            const auto high64 = _mm_unpackhi_epi64(sum128, sum128);
-            const auto sum64 = _mm_add_epi32(sum128, high64);
-
-            const auto high32 = _mm_shuffle_epi32(sum64, _MM_SHUFFLE(2, 3, 0, 1));
-            const auto sum32 = _mm_add_epi32(sum64, high32);
-
-            return _mm_cvtsi128_si32(sum32);
-        }
-
         [[nodiscard]] i32 forward(const Accumulator& acc, Color stm) {
-            static constexpr auto kChunkSize8 = sizeof(__m256i) / sizeof(i8);
-            static constexpr auto kChunkSize16 = sizeof(__m256i) / sizeof(i16);
-            static constexpr auto kChunkSize32 = sizeof(__m256i) / sizeof(i32);
-
             static constexpr auto k32ChunkSize8 = sizeof(i32) / sizeof(u8);
 
             static constexpr auto kPairCount = kL1Size / 2;
 
-            static constexpr auto kL1Shift = 16 + kQBits - kFtScaleBits - kFtQBits - kFtQBits - kL1QBits;
+            static constexpr auto kL1Shift = 16 + kQBits - kFtShift - kFtQBits - kFtQBits - kL1QBits;
 
             static constexpr i32 kQ = 1 << kQBits;
 
@@ -103,58 +78,54 @@ namespace stoat::eval::nnue {
             alignas(64) std::array<i32, kL2Size * 2> l1Out;
             alignas(64) std::array<i32, kL3Size> l2Out;
 
-            const auto zero = _mm256_setzero_si256();
+            const auto ftZero = zeroI16();
+            const auto ftOne = set1I16((1 << kFtQBits) - 1);
 
-            const auto ftOne = _mm256_set1_epi16((1 << kFtQBits) - 1);
-            const auto l1CreluOne = _mm256_set1_epi32(kQ);
-            const auto l1ScreluOne = _mm256_set1_epi32(kQ * kQ);
-            const auto l2One = _mm256_set1_epi32(kQ * kQ * kQ);
+            const auto l1CreluZero = zeroI32();
+            const auto l1CreluOne = set1I32(kQ);
+
+            const auto l1ScreluOne = set1I32(kQ * kQ);
+
+            const auto l2Zero = zeroI32();
+            const auto l2One = set1I32(kQ * kQ * kQ);
 
             const auto activatePerspective = [&](std::span<const i16, kL1Size> inputs, usize outputOffset) {
                 for (usize inputIdx = 0; inputIdx < kPairCount; inputIdx += kChunkSize16 * 4) {
-                    auto i1_0 = load(&inputs[inputIdx + kChunkSize16 * 0]);
-                    auto i1_1 = load(&inputs[inputIdx + kChunkSize16 * 1]);
-                    auto i1_2 = load(&inputs[inputIdx + kChunkSize16 * 2]);
-                    auto i1_3 = load(&inputs[inputIdx + kChunkSize16 * 3]);
+                    auto i1_0 = loadI16(&inputs[inputIdx + kChunkSize16 * 0]);
+                    auto i1_1 = loadI16(&inputs[inputIdx + kChunkSize16 * 1]);
+                    auto i1_2 = loadI16(&inputs[inputIdx + kChunkSize16 * 2]);
+                    auto i1_3 = loadI16(&inputs[inputIdx + kChunkSize16 * 3]);
 
-                    auto i2_0 = load(&inputs[inputIdx + kPairCount + kChunkSize16 * 0]);
-                    auto i2_1 = load(&inputs[inputIdx + kPairCount + kChunkSize16 * 1]);
-                    auto i2_2 = load(&inputs[inputIdx + kPairCount + kChunkSize16 * 2]);
-                    auto i2_3 = load(&inputs[inputIdx + kPairCount + kChunkSize16 * 3]);
+                    auto i2_0 = loadI16(&inputs[inputIdx + kPairCount + kChunkSize16 * 0]);
+                    auto i2_1 = loadI16(&inputs[inputIdx + kPairCount + kChunkSize16 * 1]);
+                    auto i2_2 = loadI16(&inputs[inputIdx + kPairCount + kChunkSize16 * 2]);
+                    auto i2_3 = loadI16(&inputs[inputIdx + kPairCount + kChunkSize16 * 3]);
 
-                    i1_0 = _mm256_min_epi16(i1_0, ftOne);
-                    i1_1 = _mm256_min_epi16(i1_1, ftOne);
-                    i1_2 = _mm256_min_epi16(i1_2, ftOne);
-                    i1_3 = _mm256_min_epi16(i1_3, ftOne);
+                    i1_0 = minI16(i1_0, ftOne);
+                    i1_1 = minI16(i1_1, ftOne);
+                    i1_2 = minI16(i1_2, ftOne);
+                    i1_3 = minI16(i1_3, ftOne);
 
-                    i2_0 = _mm256_min_epi16(i2_0, ftOne);
-                    i2_1 = _mm256_min_epi16(i2_1, ftOne);
-                    i2_2 = _mm256_min_epi16(i2_2, ftOne);
-                    i2_3 = _mm256_min_epi16(i2_3, ftOne);
+                    i2_0 = minI16(i2_0, ftOne);
+                    i2_1 = minI16(i2_1, ftOne);
+                    i2_2 = minI16(i2_2, ftOne);
+                    i2_3 = minI16(i2_3, ftOne);
 
-                    i1_0 = _mm256_max_epi16(i1_0, zero);
-                    i1_1 = _mm256_max_epi16(i1_1, zero);
-                    i1_2 = _mm256_max_epi16(i1_2, zero);
-                    i1_3 = _mm256_max_epi16(i1_3, zero);
+                    i1_0 = maxI16(i1_0, ftZero);
+                    i1_1 = maxI16(i1_1, ftZero);
+                    i1_2 = maxI16(i1_2, ftZero);
+                    i1_3 = maxI16(i1_3, ftZero);
 
-                    const auto s_0 = _mm256_slli_epi16(i1_0, kFtScaleBits);
-                    const auto s_1 = _mm256_slli_epi16(i1_1, kFtScaleBits);
-                    const auto s_2 = _mm256_slli_epi16(i1_2, kFtScaleBits);
-                    const auto s_3 = _mm256_slli_epi16(i1_3, kFtScaleBits);
+                    const auto p_0 = mulhiShiftI16<kFtShift>(i1_0, i2_0);
+                    const auto p_1 = mulhiShiftI16<kFtShift>(i1_1, i2_1);
+                    const auto p_2 = mulhiShiftI16<kFtShift>(i1_2, i2_2);
+                    const auto p_3 = mulhiShiftI16<kFtShift>(i1_3, i2_3);
 
-                    const auto p_0 = _mm256_mulhi_epi16(s_0, i2_0);
-                    const auto p_1 = _mm256_mulhi_epi16(s_1, i2_1);
-                    const auto p_2 = _mm256_mulhi_epi16(s_2, i2_2);
-                    const auto p_3 = _mm256_mulhi_epi16(s_3, i2_3);
+                    const auto packed_0 = packusI16(p_0, p_1);
+                    const auto packed_1 = packusI16(p_2, p_3);
 
-                    auto packed_0 = _mm256_packus_epi16(p_0, p_1);
-                    auto packed_1 = _mm256_packus_epi16(p_2, p_3);
-
-                    packed_0 = _mm256_permute4x64_epi64(packed_0, _MM_SHUFFLE(3, 1, 2, 0));
-                    packed_1 = _mm256_permute4x64_epi64(packed_1, _MM_SHUFFLE(3, 1, 2, 0));
-
-                    store(&ftOut[outputOffset + inputIdx + kChunkSize8 * 0], packed_0);
-                    store(&ftOut[outputOffset + inputIdx + kChunkSize8 * 1], packed_1);
+                    storeU8(&ftOut[outputOffset + inputIdx + kChunkSize8 * 0], packed_0);
+                    storeU8(&ftOut[outputOffset + inputIdx + kChunkSize8 * 1], packed_1);
                 }
             };
 
@@ -163,138 +134,121 @@ namespace stoat::eval::nnue {
 
             const auto* ftOutI32s = reinterpret_cast<const i32*>(ftOut.data());
 
-            alignas(64) util::MultiArray<__m256i, kL2Size / kChunkSize32, 4> intermediate{};
+            alignas(64) util::MultiArray<VecI32, kL2Size / kChunkSize32, 4> intermediate{};
 
             for (usize inputIdx = 0; inputIdx < kL1Size; inputIdx += k32ChunkSize8 * 4) {
                 const auto weightsStart = inputIdx * kL2Size;
 
-                const auto i_0 = _mm256_set1_epi32(ftOutI32s[inputIdx / k32ChunkSize8 + 0]);
-                const auto i_1 = _mm256_set1_epi32(ftOutI32s[inputIdx / k32ChunkSize8 + 1]);
-                const auto i_2 = _mm256_set1_epi32(ftOutI32s[inputIdx / k32ChunkSize8 + 2]);
-                const auto i_3 = _mm256_set1_epi32(ftOutI32s[inputIdx / k32ChunkSize8 + 3]);
+                const auto i_0 = set1I32(ftOutI32s[inputIdx / k32ChunkSize8 + 0]);
+                const auto i_1 = set1I32(ftOutI32s[inputIdx / k32ChunkSize8 + 1]);
+                const auto i_2 = set1I32(ftOutI32s[inputIdx / k32ChunkSize8 + 2]);
+                const auto i_3 = set1I32(ftOutI32s[inputIdx / k32ChunkSize8 + 3]);
 
                 for (usize outputIdx = 0; outputIdx < kL2Size; outputIdx += kChunkSize32) {
                     auto& v = intermediate[outputIdx / kChunkSize32];
 
                     const auto w_0 =
-                        load(&s_network.l1Weights[weightsStart + k32ChunkSize8 * (outputIdx + kL2Size * 0)]);
+                        loadI8(&s_network.l1Weights[weightsStart + k32ChunkSize8 * (outputIdx + kL2Size * 0)]);
                     const auto w_1 =
-                        load(&s_network.l1Weights[weightsStart + k32ChunkSize8 * (outputIdx + kL2Size * 1)]);
+                        loadI8(&s_network.l1Weights[weightsStart + k32ChunkSize8 * (outputIdx + kL2Size * 1)]);
                     const auto w_2 =
-                        load(&s_network.l1Weights[weightsStart + k32ChunkSize8 * (outputIdx + kL2Size * 2)]);
+                        loadI8(&s_network.l1Weights[weightsStart + k32ChunkSize8 * (outputIdx + kL2Size * 2)]);
                     const auto w_3 =
-                        load(&s_network.l1Weights[weightsStart + k32ChunkSize8 * (outputIdx + kL2Size * 3)]);
+                        loadI8(&s_network.l1Weights[weightsStart + k32ChunkSize8 * (outputIdx + kL2Size * 3)]);
 
-                    v[0] = dpbusd(v[0], i_0, w_0);
-                    v[1] = dpbusd(v[1], i_1, w_1);
-                    v[2] = dpbusd(v[2], i_2, w_2);
-                    v[3] = dpbusd(v[3], i_3, w_3);
+                    v[0] = dotU8I8I32(v[0], i_0, w_0);
+                    v[1] = dotU8I8I32(v[1], i_1, w_1);
+                    v[2] = dotU8I8I32(v[2], i_2, w_2);
+                    v[3] = dotU8I8I32(v[3], i_3, w_3);
                 }
             }
 
             for (usize i = 0; i < kL2Size; i += kChunkSize32) {
-                const auto biases = load(&s_network.l1Biases[i]);
+                const auto biases = loadI32(&s_network.l1Biases[i]);
 
                 const auto& v = intermediate[i / kChunkSize32];
 
-                const auto sums_0 = _mm256_add_epi32(v[0], v[1]);
-                const auto sums_1 = _mm256_add_epi32(v[2], v[3]);
+                const auto sums_0 = addI32(v[0], v[1]);
+                const auto sums_1 = addI32(v[2], v[3]);
 
-                auto out = _mm256_add_epi32(sums_0, sums_1);
+                auto out = addI32(sums_0, sums_1);
 
-                out = _mm256_srai_epi32(out, -kL1Shift);
-                out = _mm256_add_epi32(out, biases);
+                out = shiftRightI32<-kL1Shift>(out);
+                out = addI32(out, biases);
 
                 auto crelu = out;
                 auto screlu = out;
 
-                crelu = _mm256_max_epi32(crelu, zero);
-                crelu = _mm256_min_epi32(crelu, l1CreluOne);
-                crelu = _mm256_slli_epi32(crelu, kQBits);
+                crelu = maxI32(crelu, l1CreluZero);
+                crelu = minI32(crelu, l1CreluOne);
+                crelu = shiftLeftI32<kQBits>(crelu);
 
-                screlu = _mm256_mullo_epi32(screlu, screlu);
-                screlu = _mm256_min_epi32(screlu, l1ScreluOne);
+                screlu = mulI32(screlu, screlu);
+                screlu = minI32(screlu, l1ScreluOne);
 
-                store(&l1Out[i], crelu);
-                store(&l1Out[i + kL2Size], screlu);
+                storeI32(&l1Out[i], crelu);
+                storeI32(&l1Out[i + kL2Size], screlu);
             }
 
             std::ranges::copy(s_network.l2Biases, l2Out.begin());
 
             for (usize inputIdx = 0; inputIdx < kL2Size * 2; ++inputIdx) {
-                const auto input = _mm256_set1_epi32(l1Out[inputIdx]);
+                const auto input = set1I32(l1Out[inputIdx]);
 
                 for (usize outputIdx = 0; outputIdx < kL3Size; outputIdx += kChunkSize32 * 4) {
-                    const auto w_0 = load(&s_network.l2Weights[inputIdx][outputIdx + kChunkSize32 * 0]);
-                    const auto w_1 = load(&s_network.l2Weights[inputIdx][outputIdx + kChunkSize32 * 1]);
-                    const auto w_2 = load(&s_network.l2Weights[inputIdx][outputIdx + kChunkSize32 * 2]);
-                    const auto w_3 = load(&s_network.l2Weights[inputIdx][outputIdx + kChunkSize32 * 3]);
+                    const auto w_0 = loadI32(&s_network.l2Weights[inputIdx][outputIdx + kChunkSize32 * 0]);
+                    const auto w_1 = loadI32(&s_network.l2Weights[inputIdx][outputIdx + kChunkSize32 * 1]);
+                    const auto w_2 = loadI32(&s_network.l2Weights[inputIdx][outputIdx + kChunkSize32 * 2]);
+                    const auto w_3 = loadI32(&s_network.l2Weights[inputIdx][outputIdx + kChunkSize32 * 3]);
 
-                    auto out_0 = load(&l2Out[outputIdx + kChunkSize32 * 0]);
-                    auto out_1 = load(&l2Out[outputIdx + kChunkSize32 * 1]);
-                    auto out_2 = load(&l2Out[outputIdx + kChunkSize32 * 2]);
-                    auto out_3 = load(&l2Out[outputIdx + kChunkSize32 * 3]);
+                    auto out_0 = loadI32(&l2Out[outputIdx + kChunkSize32 * 0]);
+                    auto out_1 = loadI32(&l2Out[outputIdx + kChunkSize32 * 1]);
+                    auto out_2 = loadI32(&l2Out[outputIdx + kChunkSize32 * 2]);
+                    auto out_3 = loadI32(&l2Out[outputIdx + kChunkSize32 * 3]);
 
-                    const auto p_0 = _mm256_mullo_epi32(input, w_0);
-                    const auto p_1 = _mm256_mullo_epi32(input, w_1);
-                    const auto p_2 = _mm256_mullo_epi32(input, w_2);
-                    const auto p_3 = _mm256_mullo_epi32(input, w_3);
+                    const auto p_0 = mulI32(input, w_0);
+                    const auto p_1 = mulI32(input, w_1);
+                    const auto p_2 = mulI32(input, w_2);
+                    const auto p_3 = mulI32(input, w_3);
 
-                    out_0 = _mm256_add_epi32(out_0, p_0);
-                    out_1 = _mm256_add_epi32(out_1, p_1);
-                    out_2 = _mm256_add_epi32(out_2, p_2);
-                    out_3 = _mm256_add_epi32(out_3, p_3);
+                    out_0 = addI32(out_0, p_0);
+                    out_1 = addI32(out_1, p_1);
+                    out_2 = addI32(out_2, p_2);
+                    out_3 = addI32(out_3, p_3);
 
-                    store(&l2Out[outputIdx + kChunkSize32 * 0], out_0);
-                    store(&l2Out[outputIdx + kChunkSize32 * 1], out_1);
-                    store(&l2Out[outputIdx + kChunkSize32 * 2], out_2);
-                    store(&l2Out[outputIdx + kChunkSize32 * 3], out_3);
+                    storeI32(&l2Out[outputIdx + kChunkSize32 * 0], out_0);
+                    storeI32(&l2Out[outputIdx + kChunkSize32 * 1], out_1);
+                    storeI32(&l2Out[outputIdx + kChunkSize32 * 2], out_2);
+                    storeI32(&l2Out[outputIdx + kChunkSize32 * 3], out_3);
                 }
             }
 
-            auto out_0 = zero;
-            auto out_1 = zero;
-            auto out_2 = zero;
-            auto out_3 = zero;
+            auto out_0 = l2Zero;
+            auto out_1 = l2Zero;
 
-            for (usize inputIdx = 0; inputIdx < kL3Size; inputIdx += kChunkSize32 * 4) {
-                auto i_0 = load(&l2Out[inputIdx + kChunkSize32 * 0]);
-                auto i_1 = load(&l2Out[inputIdx + kChunkSize32 * 1]);
-                auto i_2 = load(&l2Out[inputIdx + kChunkSize32 * 2]);
-                auto i_3 = load(&l2Out[inputIdx + kChunkSize32 * 3]);
+            for (usize inputIdx = 0; inputIdx < kL3Size; inputIdx += kChunkSize32 * 2) {
+                auto i_0 = loadI32(&l2Out[inputIdx + kChunkSize32 * 0]);
+                auto i_1 = loadI32(&l2Out[inputIdx + kChunkSize32 * 1]);
 
-                const auto w_0 = load(&s_network.l3Weights[inputIdx + kChunkSize32 * 0]);
-                const auto w_1 = load(&s_network.l3Weights[inputIdx + kChunkSize32 * 1]);
-                const auto w_2 = load(&s_network.l3Weights[inputIdx + kChunkSize32 * 2]);
-                const auto w_3 = load(&s_network.l3Weights[inputIdx + kChunkSize32 * 3]);
+                const auto w_0 = loadI32(&s_network.l3Weights[inputIdx + kChunkSize32 * 0]);
+                const auto w_1 = loadI32(&s_network.l3Weights[inputIdx + kChunkSize32 * 1]);
 
-                i_0 = _mm256_max_epi32(i_0, zero);
-                i_1 = _mm256_max_epi32(i_1, zero);
-                i_2 = _mm256_max_epi32(i_2, zero);
-                i_3 = _mm256_max_epi32(i_3, zero);
+                i_0 = maxI32(i_0, l2Zero);
+                i_1 = maxI32(i_1, l2Zero);
 
-                i_0 = _mm256_min_epi32(i_0, l2One);
-                i_1 = _mm256_min_epi32(i_1, l2One);
-                i_2 = _mm256_min_epi32(i_2, l2One);
-                i_3 = _mm256_min_epi32(i_3, l2One);
+                i_0 = minI32(i_0, l2One);
+                i_1 = minI32(i_1, l2One);
 
-                i_0 = _mm256_mullo_epi32(i_0, w_0);
-                i_1 = _mm256_mullo_epi32(i_1, w_1);
-                i_2 = _mm256_mullo_epi32(i_2, w_2);
-                i_3 = _mm256_mullo_epi32(i_3, w_3);
+                i_0 = mulI32(i_0, w_0);
+                i_1 = mulI32(i_1, w_1);
 
-                out_0 = _mm256_add_epi32(out_0, i_0);
-                out_1 = _mm256_add_epi32(out_1, i_1);
-                out_2 = _mm256_add_epi32(out_2, i_2);
-                out_3 = _mm256_add_epi32(out_3, i_3);
+                out_0 = addI32(out_0, i_0);
+                out_1 = addI32(out_1, i_1);
             }
 
-            const auto s0 = _mm256_add_epi32(out_0, out_1);
-            const auto s1 = _mm256_add_epi32(out_2, out_3);
+            const auto s = addI32(out_0, out_1);
 
-            const auto s = _mm256_add_epi32(s0, s1);
-
-            auto out = s_network.l3Bias + hsum32(s);
+            auto out = s_network.l3Bias + hsumI32(s);
 
             out /= kQ;
             out *= kScale;
